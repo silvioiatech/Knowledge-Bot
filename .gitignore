@@ -62,6 +62,11 @@ temp/
 # Knowledge base (optional - uncomment to ignore)
 # knowledge_base/
 
+# Private repository (keep your knowledge library separate)
+../my-private-knowledge/
+ObsidianVault/
+private_repo.env
+
 # Test files
 .coverage
 .pytest_cache/

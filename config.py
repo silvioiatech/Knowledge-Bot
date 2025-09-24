@@ -53,6 +53,19 @@ class Config:
     # Storage
     KNOWLEDGE_BASE_PATH: Path = Path(os.getenv("KNOWLEDGE_BASE_PATH", "./knowledge_base"))
     
+    # Book Mode Configuration
+    STORAGE_MODE: str = os.getenv("STORAGE_MODE", "book")  # "book" or "markdown"
+    OBSIDIAN_VAULT_PATH: str = os.getenv("OBSIDIAN_VAULT_PATH", "../my-private-knowledge")
+    ENABLE_BOOK_STRUCTURE: bool = os.getenv("ENABLE_BOOK_STRUCTURE", "true").lower() == "true"
+    AUTO_GENERATE_INDEX: bool = os.getenv("AUTO_GENERATE_INDEX", "true").lower() == "true"
+    
+    # Private Repository Configuration
+    PRIVATE_REPO_PATH: str = os.getenv("PRIVATE_REPO_PATH", "../my-private-knowledge")
+    GITHUB_USERNAME: str = os.getenv("GITHUB_USERNAME", "")
+    GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")  # Personal Access Token
+    AUTO_COMMIT: bool = os.getenv("AUTO_COMMIT", "true").lower() == "true"
+    AUTO_PUSH: bool = os.getenv("AUTO_PUSH", "true").lower() == "true"
+    
     # Limits
     MAX_VIDEO_DURATION_SECONDS: int = _safe_int(os.getenv("MAX_VIDEO_DURATION_SECONDS"), "600")
     RATE_LIMIT_PER_HOUR: int = _safe_int(os.getenv("RATE_LIMIT_PER_HOUR"), "10")

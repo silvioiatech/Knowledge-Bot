@@ -227,11 +227,43 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
             await callback.message.edit_text(PROGRESS_MESSAGES["saving"])
             
             try:
-                file_path = await save_knowledge_entry(enriched_content, analysis)
-                success_msg = f"{PROGRESS_MESSAGES['completed']}\n\n📁 Saved to: <code>{file_path}</code>"
-                await callback.message.edit_text(success_msg)
+                # Check storage mode and save accordingly
+                from config import Config
                 
-                # Send the Markdown content to the user
+                if Config.STORAGE_MODE == "book" and Config.ENABLE_BOOK_STRUCTURE:
+                    # Save as book page
+                    try:
+                        from storage.book_storage import save_knowledge_entry_as_book
+                        file_path = await save_knowledge_entry_as_book(enriched_content, analysis)
+                        
+                        # Get section info for better message
+                        section = analysis.get('subject', 'Knowledge')
+                        title = analysis.get('title', 'Unknown Title')
+                        
+                        success_msg = f"""✅ **Added to your Knowledge Library!**
+
+📚 **Section:** {section.title()}
+📖 **Title:** {title}
+📄 **Page:** {file_path}
+
+🔗 Open Obsidian to read your digital book!"""
+                        
+                        await callback.message.edit_text(success_msg, parse_mode='Markdown')
+                        
+                    except Exception as book_error:
+                        if logger:
+                            logger.error(f"Book storage failed: {book_error}, falling back to markdown")
+                        # Fallback to regular markdown storage
+                        file_path = await save_knowledge_entry(enriched_content, analysis)
+                        success_msg = f"{PROGRESS_MESSAGES['completed']}\n\n📁 Saved to: <code>{file_path}</code>"
+                        await callback.message.edit_text(success_msg)
+                else:
+                    # Regular markdown storage
+                    file_path = await save_knowledge_entry(enriched_content, analysis)
+                    success_msg = f"{PROGRESS_MESSAGES['completed']}\n\n📁 Saved to: <code>{file_path}</code>"
+                    await callback.message.edit_text(success_msg)
+                
+                # Send the Markdown content to the user (works for both modes)
                 await send_markdown_content(callback.message, enriched_content, analysis)
                 
             except MarkdownStorageError as e:
