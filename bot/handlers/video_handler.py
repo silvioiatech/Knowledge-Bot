@@ -91,7 +91,17 @@ async def process_video_url(message: Message, state: FSMContext, url: str):
         try:
             download_info, video_path = await download_video_from_url(url)
         except RailwayDownloadError as e:
-            await status_msg.edit_text(ERROR_MESSAGES["download_failed"])
+            # Provide more specific error messages based on error type
+            if "url" in str(e).lower() or "not found" in str(e).lower():
+                error_msg = "❌ Video not found or unavailable. Please check the URL."
+            elif "private" in str(e).lower():
+                error_msg = "❌ This video is private and cannot be downloaded."
+            elif "service error" in str(e).lower():
+                error_msg = "❌ Download service temporarily unavailable. Please try again later."
+            else:
+                error_msg = ERROR_MESSAGES["download_failed"]
+            
+            await status_msg.edit_text(error_msg)
             if logger:
                 logger.error(f"Download failed for user {user_id}: {e}")
             return

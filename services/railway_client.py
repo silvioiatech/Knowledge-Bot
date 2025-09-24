@@ -33,6 +33,20 @@ class RailwayClient:
         if self.api_key and self.api_key.strip():
             self.headers["Authorization"] = f"Bearer {self.api_key.strip()}"
     
+    async def health_check(self) -> bool:
+        """Check if Railway API is responding."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Try the healthz endpoint (matches your Railway API)
+                response = await client.get(
+                    f"{self.base_url}/healthz",
+                    headers=self.headers
+                )
+                return response.status_code == 200
+        except Exception as e:
+            logger.warning(f"Railway API health check failed: {e}")
+            return False
+    
     async def download_video(self, url: str) -> Dict[str, Any]:
         """
         Download video from URL via Railway API.
@@ -47,6 +61,14 @@ class RailwayClient:
             RailwayDownloadError: If download fails
         """
         try:
+            # Optional health check (don't fail if this doesn't work)
+            try:
+                is_healthy = await self.health_check()
+                if not is_healthy:
+                    logger.warning("Railway API health check failed, but continuing with download attempt")
+            except Exception:
+                logger.debug("Health check skipped due to error")
+            
             # Start download request
             download_data = await self._start_download(url)
             request_id = download_data.get("request_id")
@@ -73,18 +95,40 @@ class RailwayClient:
     
     async def _start_download(self, url: str) -> Dict[str, Any]:
         """Start download request and return request ID."""
+        payload = {
+            "url": url,
+            "format": "best[height<=720]",  # Optimize for analysis
+            "extract_flat": False
+        }
+        
+        logger.info(f"Starting Railway download request for URL: {url}")
+        logger.debug(f"Request payload: {payload}")
+        logger.debug(f"Request URL: {self.base_url}/download")
+        logger.debug(f"Request headers: {dict(self.headers)}")
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{self.base_url}/download",
-                headers=self.headers,
-                json={
-                    "url": url,
-                    "format": "best[height<=720]",  # Optimize for analysis
-                    "extract_flat": False
-                }
-            )
-            response.raise_for_status()
-            return response.json()
+            try:
+                response = await client.post(
+                    f"{self.base_url}/download",
+                    headers=self.headers,
+                    json=payload
+                )
+                
+                logger.debug(f"Railway API response status: {response.status_code}")
+                logger.debug(f"Railway API response headers: {dict(response.headers)}")
+                logger.debug(f"Railway API response body: {response.text}")
+                
+                response.raise_for_status()
+                result = response.json()
+                logger.info(f"Download request started successfully, request_id: {result.get('request_id')}")
+                return result
+                
+            except httpx.HTTPStatusError as e:
+                logger.error(f"Railway API HTTP error: {e.response.status_code} - {e.response.text}")
+                raise
+            except Exception as e:
+                logger.error(f"Railway API request error: {e}")
+                raise
     
     async def _poll_download_status(self, request_id: str, max_attempts: int = 120) -> Dict[str, Any]:
         """
@@ -104,25 +148,51 @@ class RailwayClient:
                         f"{self.base_url}/downloads/{request_id}",
                         headers=self.headers
                     )
+                    
+                    logger.debug(f"Polling response status: {response.status_code}")
+                    logger.debug(f"Polling response body: {response.text}")
+                    
                     response.raise_for_status()
                     result = response.json()
                     
                     status = result.get("status")
                     progress = result.get("progress", "Unknown")
                     logger.info(f"Download status: {status} | Progress: {progress} | Attempt: {attempt + 1}/{max_attempts}")
+                    logger.debug(f"Full polling response: {result}")
                     
-                    if status == "completed":
+                    # Handle your Railway API status values (uppercase)
+                    if status == "DONE":
                         logger.success(f"Download completed successfully after {attempt + 1} attempts")
                         return result
-                    elif status == "failed":
-                        error = result.get("error", "Unknown error")
-                        raise RailwayDownloadError(f"Download failed: {error}")
-                    elif status in ["pending", "processing", "running", "downloading", "extracting", "queued"]:
+                    elif status == "ERROR":
+                        # Try to extract detailed error information
+                        error_details = []
+                        
+                        # Check multiple possible error fields
+                        for error_field in ["error", "message", "stderr", "error_message", "details"]:
+                            if error_field in result and result[error_field]:
+                                error_details.append(str(result[error_field]))
+                        
+                        # If no error details found, use the full response
+                        if not error_details:
+                            error_details.append(f"No error details provided. Status: {status}")
+                        
+                        error_message = " | ".join(error_details)
+                        logger.error(f"Download failed with status '{status}': {error_message}")
+                        logger.debug(f"Full error response: {result}")
+                        
+                        # Check if this is a URL-related error
+                        if any(keyword in error_message.lower() for keyword in ["url", "not found", "private", "unavailable"]):
+                            raise RailwayDownloadError(f"Video URL error: {error_message}")
+                        else:
+                            raise RailwayDownloadError(f"Download service error: {error_message}")
+                    elif status in ["QUEUED", "RUNNING"]:
                         logger.debug(f"Download in progress ({status}), waiting 5 seconds...")
                         await asyncio.sleep(5)  # Wait 5 seconds between polls
                         continue
                     else:
                         logger.warning(f"Unknown status '{status}', treating as in-progress and continuing to poll")
+                        logger.debug(f"Raw response for unknown status: {result}")
                         await asyncio.sleep(5)  # Continue polling for unknown status
                         continue
                         
