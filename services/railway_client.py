@@ -22,16 +22,16 @@ class RailwayClient:
     
     def __init__(self):
         if not Config.RAILWAY_API_URL:
-            raise ValueError("RAILWAY_API_URL is not configured")
-        if not Config.RAILWAY_API_KEY:
-            raise ValueError("RAILWAY_API_KEY is not configured")
+            raise RailwayDownloadError("RAILWAY_API_URL is not configured")
+        
         self.base_url = Config.RAILWAY_API_URL.rstrip('/')
-        self.api_key = Config.RAILWAY_API_KEY
+        self.api_key = Config.RAILWAY_API_KEY  # Can be empty/None
         self.timeout = Config.RAILWAY_DOWNLOAD_TIMEOUT
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        
+        # Headers - only add Authorization if API key is provided
+        self.headers = {"Content-Type": "application/json"}
+        if self.api_key and self.api_key.strip():
+            self.headers["Authorization"] = f"Bearer {self.api_key.strip()}"
     
     async def download_video(self, url: str) -> Dict[str, Any]:
         """

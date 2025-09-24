@@ -1,12 +1,12 @@
-"""Claude content enrichment service."""
+"""Claude content enrichment service via OpenRouter."""
 
 from typing import Dict, Any
 
 try:
-    from anthropic import Anthropic
+    import httpx
     from loguru import logger
 except ImportError:
-    Anthropic = None
+    httpx = None
     logger = None
 
 from config import Config
@@ -18,13 +18,18 @@ class ClaudeEnrichmentError(Exception):
 
 
 class ClaudeService:
-    """Service for enriching content with Claude API."""
+    """Service for enriching content with Claude API via OpenRouter."""
     
     def __init__(self):
-        if not Anthropic:
-            raise ClaudeEnrichmentError("anthropic not installed")
+        if not httpx:
+            raise ClaudeEnrichmentError("httpx not installed")
+        
+        if not Config.OPENROUTER_API_KEY:
+            raise ClaudeEnrichmentError("OPENROUTER_API_KEY not configured")
             
-        self.client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+        self.api_key = Config.OPENROUTER_API_KEY
+        self.model = Config.OPENROUTER_MODEL
+        self.base_url = Config.OPENROUTER_BASE_URL
         self.timeout = Config.CLAUDE_ENRICHMENT_TIMEOUT
     
     async def enrich_content(self, analysis: Dict[str, Any]) -> str:
@@ -42,28 +47,44 @@ class ClaudeService:
         """
         try:
             if logger:
-                logger.info("Starting Claude content enrichment")
+                logger.info("Starting Claude content enrichment via OpenRouter")
             
             # Build enrichment prompt
             prompt = self._build_enrichment_prompt(analysis)
             
-            # Call Claude API
-            response = self.client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=2000,
-                temperature=0.3,
-                messages=[
+            # Call OpenRouter API
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/silvioiatech/Knowledge-Bot",
+                "X-Title": "Knowledge Bot"
+            }
+            
+            payload = {
+                "model": self.model,
+                "messages": [
                     {
-                        "role": "user",
+                        "role": "user", 
                         "content": prompt
                     }
-                ]
-            )
+                ],
+                "max_tokens": 2000,
+                "temperature": 0.3
+            }
             
-            enriched_content = response.content[0].text.strip()
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                
+                result = response.json()
+                enriched_content = result["choices"][0]["message"]["content"].strip()
             
             if logger:
-                logger.success("Claude enrichment completed")
+                logger.success("Claude enrichment completed via OpenRouter")
             
             return enriched_content
             
@@ -82,7 +103,6 @@ class ClaudeService:
         visible_text = analysis.get("visible_text", [])
         resources = analysis.get("resources", [])
         difficulty = analysis.get("difficulty_level", "unknown")
-        tags = analysis.get("tags", [])
         
         # Format key points
         key_points_text = "\n".join([f"- {point}" for point in key_points])

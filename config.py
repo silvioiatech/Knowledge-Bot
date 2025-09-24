@@ -37,13 +37,18 @@ class Config:
     # Telegram Bot
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     
-    # Railway yt-dlp API
+    # Railway yt-dlp API (optional)
     RAILWAY_API_URL: str = os.getenv("RAILWAY_API_URL", "")
-    RAILWAY_API_KEY: str = os.getenv("RAILWAY_API_KEY", "")
+    RAILWAY_API_KEY: str = os.getenv("RAILWAY_API_KEY", "")  # Optional - can be empty
     
     # AI Services
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")  # Default to Gemini 2.0 Flash
+    
+    # OpenRouter (instead of direct Anthropic)
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")  # Default Claude 3.5 Sonnet
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     
     # Storage
     KNOWLEDGE_BASE_PATH: Path = Path(os.getenv("KNOWLEDGE_BASE_PATH", "./knowledge_base"))
@@ -63,10 +68,8 @@ class Config:
         """Validate that all required environment variables are set."""
         required_vars = [
             "TELEGRAM_BOT_TOKEN",
-            "RAILWAY_API_URL", 
-            "RAILWAY_API_KEY",
             "GEMINI_API_KEY",
-            "ANTHROPIC_API_KEY"
+            "OPENROUTER_API_KEY"
         ]
         
         missing_vars = []
@@ -76,6 +79,10 @@ class Config:
         
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        # Optional validation warnings
+        if not cls.RAILWAY_API_URL:
+            print("⚠️  Warning: RAILWAY_API_URL not set - video downloads may not work")
         
         return True
 
@@ -94,8 +101,8 @@ ERROR_MESSAGES = {
 # Progress messages
 PROGRESS_MESSAGES = {
     "downloading": "🔄 Downloading video...",
-    "analyzing": "🤖 Analyzing with Gemini...",
-    "enriching": "✨ Enriching content with Claude...",
+    "analyzing": f"🤖 Analyzing with {Config.GEMINI_MODEL.replace('gemini-', 'Gemini ')}...",
+    "enriching": f"✨ Enriching content with {Config.OPENROUTER_MODEL.split('/')[-1]}...",
     "saving": "💾 Saving to knowledge base...",
     "completed": "✅ Successfully added to knowledge base!",
 }

@@ -28,7 +28,7 @@ class GeminiService:
             raise GeminiAnalysisError("google-generativeai not installed")
             
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = genai.GenerativeModel(Config.GEMINI_MODEL)
         self.timeout = Config.GEMINI_ANALYSIS_TIMEOUT
         
     async def analyze_video(self, video_path: Path) -> Dict[str, Any]:

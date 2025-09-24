@@ -60,9 +60,11 @@ nano .env
 
 Required API keys:
 - **Telegram Bot Token**: Create bot with [@BotFather](https://t.me/botfather)
-- **Railway API**: Deploy yt-dlp service on Railway
 - **Gemini API Key**: Get from [Google AI Studio](https://aistudio.google.com)
-- **Anthropic API Key**: Get from [Anthropic Console](https://console.anthropic.com)
+- **OpenRouter API Key**: Get from [OpenRouter](https://openrouter.ai)
+
+Optional:
+- **Railway API**: Deploy yt-dlp service on Railway (API key not required)
 
 ### 3. Launch
 
@@ -88,10 +90,12 @@ python bot/main.py
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | Required |
-| `RAILWAY_API_URL` | Railway yt-dlp service URL | Required |
-| `RAILWAY_API_KEY` | Railway API authentication | Required |
 | `GEMINI_API_KEY` | Google Gemini API key | Required |
-| `ANTHROPIC_API_KEY` | Claude API key | Required |
+| `GEMINI_MODEL` | Gemini model to use | `gemini-2.0-flash-exp` |
+| `OPENROUTER_API_KEY` | OpenRouter API key | Required |
+| `OPENROUTER_MODEL` | Claude model via OpenRouter | `anthropic/claude-3.5-sonnet` |
+| `RAILWAY_API_URL` | Railway yt-dlp service URL | Optional |
+| `RAILWAY_API_KEY` | Railway API authentication | Optional |
 | `KNOWLEDGE_BASE_PATH` | Storage directory | `./knowledge_base` |
 | `MAX_VIDEO_DURATION_SECONDS` | Video length limit | `600` (10 min) |
 | `RATE_LIMIT_PER_HOUR` | Max videos per user | `10` |
@@ -158,12 +162,13 @@ Bot logs are saved to `logs/bot_YYYY-MM-DD.log` with 7-day rotation.
 ## 🔗 Dependencies
 
 - **aiogram 3.5**: Telegram bot framework
-- **httpx**: Async HTTP client for API calls
-- **google-generativeai 0.7+**: Official Google Gemini AI SDK (updated from 0.3.2)
-- **anthropic**: Claude API client  
+- **httpx**: Async HTTP client for API calls and OpenRouter integration
+- **google-generativeai 0.7+**: Official Google Gemini AI SDK
 - **loguru**: Structured logging
 - **aiofiles**: Async file operations
 - **pyyaml**: YAML frontmatter processing
+
+**Note**: Removed `anthropic` dependency - now using OpenRouter for Claude API access
 
 ## 📝 License
 
