@@ -4,7 +4,7 @@ import asyncio
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 import httpx
 from loguru import logger
@@ -55,11 +55,13 @@ class RailwayClient:
                 raise RailwayDownloadError("No request ID received from Railway API")
             
             # Poll for completion
+            logger.info(f"Starting to poll download status for request_id: {request_id}")
             result = await self._poll_download_status(request_id)
             
             if not result.get("file_url"):
                 raise RailwayDownloadError("No file URL in completed download")
                 
+            logger.success(f"Railway download completed successfully for request_id: {request_id}")
             return result
             
         except httpx.RequestError as e:
@@ -84,13 +86,13 @@ class RailwayClient:
             response.raise_for_status()
             return response.json()
     
-    async def _poll_download_status(self, request_id: str, max_attempts: int = 60) -> Dict[str, Any]:
+    async def _poll_download_status(self, request_id: str, max_attempts: int = 120) -> Dict[str, Any]:
         """
         Poll download status until completion.
         
         Args:
             request_id: Download request ID
-            max_attempts: Maximum polling attempts (5min timeout)
+            max_attempts: Maximum polling attempts (10min timeout)
             
         Returns:
             Completed download result
@@ -106,18 +108,23 @@ class RailwayClient:
                     result = response.json()
                     
                     status = result.get("status")
-                    logger.debug(f"Download status: {status} (attempt {attempt + 1})")
+                    progress = result.get("progress", "Unknown")
+                    logger.info(f"Download status: {status} | Progress: {progress} | Attempt: {attempt + 1}/{max_attempts}")
                     
                     if status == "completed":
+                        logger.success(f"Download completed successfully after {attempt + 1} attempts")
                         return result
                     elif status == "failed":
                         error = result.get("error", "Unknown error")
                         raise RailwayDownloadError(f"Download failed: {error}")
-                    elif status in ["pending", "processing"]:
+                    elif status in ["pending", "processing", "running", "downloading", "extracting", "queued"]:
+                        logger.debug(f"Download in progress ({status}), waiting 5 seconds...")
                         await asyncio.sleep(5)  # Wait 5 seconds between polls
                         continue
                     else:
-                        raise RailwayDownloadError(f"Unknown status: {status}")
+                        logger.warning(f"Unknown status '{status}', treating as in-progress and continuing to poll")
+                        await asyncio.sleep(5)  # Continue polling for unknown status
+                        continue
                         
                 except httpx.RequestError as e:
                     logger.warning(f"Polling error (attempt {attempt + 1}): {e}")
@@ -126,7 +133,7 @@ class RailwayClient:
                         continue
                     raise RailwayDownloadError(f"Polling failed: {e}")
             
-            raise RailwayDownloadError("Download timeout after 5 minutes")
+            raise RailwayDownloadError("Download timeout after 10 minutes")
     
     async def download_file(self, file_url: str) -> Path:
         """
