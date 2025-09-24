@@ -241,6 +241,10 @@ class RailwayClient:
             RailwayDownloadError: If file download fails
         """
         try:
+            # Ensure file_url has proper protocol
+            if not file_url.startswith(('http://', 'https://')):
+                file_url = f"https://{file_url}"
+            
             # Create temporary file
             temp_dir = Path(tempfile.gettempdir()) / "knowledge_bot"
             temp_dir.mkdir(exist_ok=True)
