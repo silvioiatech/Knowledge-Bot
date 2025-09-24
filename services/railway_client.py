@@ -33,6 +33,23 @@ class RailwayClient:
         if self.api_key and self.api_key.strip():
             self.headers["Authorization"] = f"Bearer {self.api_key.strip()}"
     
+    def _get_format_selector(self, url: str) -> str:
+        """Get appropriate format selector based on URL platform."""
+        url_lower = url.lower()
+        
+        if "tiktok.com" in url_lower or "vm.tiktok.com" in url_lower:
+            # TikTok: Use simple selectors as they have non-standard format IDs
+            return "best/worst"
+        elif "instagram.com" in url_lower:
+            # Instagram: Usually has standard formats
+            return "best[height<=1080]/best"
+        elif "youtube.com" in url_lower or "youtu.be" in url_lower:
+            # YouTube: Comprehensive format support
+            return "bv*[height<=1080]+ba/best[height<=1080]/best"
+        else:
+            # Default: Safe fallback for unknown platforms
+            return "best/worst"
+
     async def health_check(self) -> bool:
         """Check if Railway API is responding."""
         try:
@@ -95,13 +112,18 @@ class RailwayClient:
     
     async def _start_download(self, url: str) -> Dict[str, Any]:
         """Start download request and return request ID."""
+        
+        # Choose format based on platform for better compatibility
+        format_selector = self._get_format_selector(url)
+        
         payload = {
             "url": url,
-            "format": "best[height<=720]",  # Optimize for analysis
-            "extract_flat": False
+            "format": format_selector,
+            "path": "videos/{safe_title}-{id}.{ext}"  # Use your path template system
         }
         
         logger.info(f"Starting Railway download request for URL: {url}")
+        logger.info(f"Using format selector: {format_selector}")
         logger.debug(f"Request payload: {payload}")
         logger.debug(f"Request URL: {self.base_url}/download")
         logger.debug(f"Request headers: {dict(self.headers)}")
