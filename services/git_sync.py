@@ -13,7 +13,7 @@ class GitKnowledgeSync:
     """Handles automatic git operations for private knowledge repository."""
     
     def __init__(self, repo_path: Optional[str] = None):
-        self.repo_path = Path(repo_path or Config.PRIVATE_REPO_PATH)
+        self.repo_path = Path(repo_path or Config.PRIVATE_REPO_PATH).resolve()
         self.github_username = Config.GITHUB_USERNAME
         self.github_token = Config.GITHUB_TOKEN
         self.auto_commit = Config.AUTO_COMMIT
