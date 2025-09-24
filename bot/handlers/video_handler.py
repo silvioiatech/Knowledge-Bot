@@ -1,7 +1,6 @@
 """Video URL handler for Telegram bot."""
 
 import re
-import asyncio
 from typing import Dict, Any
 
 try:
@@ -26,6 +25,56 @@ from storage.markdown_storage import save_knowledge_entry, MarkdownStorageError
 class VideoStates(StatesGroup):
     """FSM states for video processing."""
     waiting_for_approval = State()
+
+
+async def send_markdown_content(message: Message, enriched_content: str, analysis: Dict[str, Any]):
+    """Send the enriched markdown content to the user in Telegram."""
+    try:
+        # Extract title for the message header
+        title = analysis.get('title', 'Unknown Title')
+        
+        # Create a formatted header
+        header = f"📖 **Knowledge Entry: {title}**\n\n"
+        
+        # Prepare the content - if it's too long, we'll need to split it
+        full_content = header + enriched_content
+        
+        # Telegram message limit is 4096 characters
+        if len(full_content) <= 4000:
+            # Send as single message with markdown formatting
+            await message.answer(full_content, parse_mode='Markdown')
+        else:
+            # Split into multiple messages
+            await message.answer(f"📖 **Knowledge Entry: {title}**", parse_mode='Markdown')
+            
+            # Split the enriched content into chunks
+            chunks = []
+            lines = enriched_content.split('\n')
+            current_chunk = ""
+            
+            for line in lines:
+                if len(current_chunk + line + "\n") <= 3900:  # Leave some buffer
+                    current_chunk += line + "\n"
+                else:
+                    if current_chunk:
+                        chunks.append(current_chunk)
+                    current_chunk = line + "\n"
+            
+            if current_chunk:
+                chunks.append(current_chunk)
+            
+            # Send each chunk
+            for i, chunk in enumerate(chunks):
+                if i == 0:
+                    await message.answer(f"**Part {i+1}/{len(chunks)}:**\n\n{chunk}", parse_mode='Markdown')
+                else:
+                    await message.answer(f"**Part {i+1}/{len(chunks)}:**\n\n{chunk}", parse_mode='Markdown')
+                    
+    except Exception as e:
+        if logger:
+            logger.error(f"Failed to send markdown content: {e}")
+        # Send a fallback message
+        await message.answer("📖 Knowledge entry saved! (Unable to display content due to formatting)")
 
 
 def create_approval_keyboard(analysis_data: Dict[str, Any]) -> InlineKeyboardMarkup:
@@ -181,6 +230,10 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
                 file_path = await save_knowledge_entry(enriched_content, analysis)
                 success_msg = f"{PROGRESS_MESSAGES['completed']}\n\n📁 Saved to: <code>{file_path}</code>"
                 await callback.message.edit_text(success_msg)
+                
+                # Send the Markdown content to the user
+                await send_markdown_content(callback.message, enriched_content, analysis)
+                
             except MarkdownStorageError as e:
                 await callback.message.edit_text(ERROR_MESSAGES["storage_failed"])
                 if logger:
