@@ -59,13 +59,17 @@ tmp/
 temp/
 *.tmp
 
-# Knowledge base (optional - uncomment to ignore)
-# knowledge_base/
+# Private knowledge repositories (users' personal data)
+**/my-private-knowledge/
+**/ObsidianVault/
+private_repo*.env
+knowledge_base/
 
-# Private repository (keep your knowledge library separate)
-../my-private-knowledge/
-ObsidianVault/
-private_repo.env
+# Development and debug files
+debug_*.py
+test_*.py
+*_debug.md
+*_fix.md
 
 # Test files
 .coverage

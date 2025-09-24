@@ -1,28 +1,55 @@
-# Knowledge Bot MVP
+# 🤖 AI Knowledge Bot
 
-A Python Telegram bot that processes TikTok/Instagram video URLs, analyzes content with AI, and builds a knowledge base from video insights.
+A powerful Python Telegram bot that transforms TikTok/Instagram videos into organized knowledge entries. Uses AI to analyze video content and automatically creates beautiful, searchable knowledge bases.
 
-## 🎯 Features
+## ✨ Features
 
-- **Video Processing**: Downloads videos from TikTok and Instagram URLs
-- **AI Analysis**: Uses Google Gemini 1.5 Flash for video content analysis  
-- **Content Enrichment**: Transforms analysis into educational content with Claude
-- **Knowledge Base**: Automatically saves content as categorized Markdown files
-- **Interactive Approval**: Users can approve/reject analysis before saving
-- **Rate Limiting**: Max 10 videos per user per hour
+### 🎥 **Smart Video Processing**
+- Downloads from TikTok & Instagram URLs
+- Handles multiple video formats automatically
+- Railway.app integration for reliable downloading
 
-## 🏗️ Architecture
+### 🧠 **AI-Powered Analysis**
+- **Google Gemini 2.0 Flash** - Advanced video content analysis
+- **Claude 3.5 Sonnet** - Educational content enhancement
+- Extracts key concepts, tools, and learning points
+
+### 📚 **Beautiful Knowledge Organization**
+- **Book Mode**: Obsidian-optimized with elegant formatting
+- **Markdown Mode**: Simple files for any editor
+- Auto-categorization by subject and tools
+- Cross-references and navigation links
+
+### 🔒 **Privacy & Control**
+- Interactive approval system - you control what gets saved
+- Private repository integration for personal knowledge
+- Rate limiting and user management
+- Local or cloud storage options
+
+### 📱 **Multi-Platform Access**
+- Works with any Markdown editor
+- Obsidian mobile app support
+- GitHub integration for sync across devices
+
+## 🏗️ Project Structure
 
 ```
-knowledge-bot/
-├── bot/
-│   ├── main.py              # Bot initialization & polling
-│   ├── middleware.py        # Rate limiting middleware
+Knowledge-Bot/
+├── 📁 bot/
+│   ├── main.py              # aiogram bot initialization
 │   └── handlers/
-│       └── video_handler.py # URL detection & workflow
-├── services/
-│   ├── railway_client.py    # Railway yt-dlp API integration
-│   ├── gemini_service.py    # Google Gemini video analysis
+│       └── video_handler.py # Video processing workflow
+├── 📁 services/
+│   ├── railway_client.py    # Video download service
+│   ├── gemini_service.py    # AI video analysis
+│   ├── claude_service.py    # Content enrichment
+│   └── git_sync.py          # GitHub integration
+├── 📁 storage/
+│   ├── markdown_storage.py  # Simple markdown files
+│   └── book_storage.py      # Obsidian book format
+├── ⚙️ config.py             # Configuration management
+├── 🚀 app.py               # Main application entry
+└── 📖 PRIVATE_REPOSITORY_SETUP.md  # Setup guide
 │   └── claude_service.py    # Claude content enrichment
 ├── storage/
 │   └── markdown_storage.py  # Markdown file management
@@ -70,11 +97,10 @@ Optional:
 
 ```bash
 # Run the bot
-python run_bot.py
-
-# Or directly
-python bot/main.py
+python app.py
 ```
+
+The bot will start polling for messages. Send it a TikTok or Instagram URL to begin!
 
 ## 📋 Usage Workflow
 
@@ -130,28 +156,51 @@ Tool descriptions...
 Links and references...
 ```
 
-## 🛠️ Development
+## � Storage Modes
 
-### Testing Individual Components
+### 📝 **Markdown Mode** (Default)
+- Simple markdown files in `./knowledge_base/`
+- Works with any text editor
+- Easy to backup and version control
 
+### 📖 **Book Mode** (Obsidian)
+- Beautiful book-like formatting
+- Auto-categorization into sections
+- Cross-references and navigation
+- Perfect for Obsidian users
+
+To enable Book Mode:
 ```bash
-# Test Railway client
-python -c "from services.railway_client import *; import asyncio; asyncio.run(download_video_from_url('URL'))"
-
-# Test Gemini analysis  
-python -c "from services.gemini_service import *; import asyncio; asyncio.run(analyze_video_content('video.mp4'))"
-
-# Test Claude enrichment
-python -c "from services.claude_service import *; import asyncio; asyncio.run(enrich_analysis({...}))"
+# In your .env file
+STORAGE_MODE=book
+OBSIDIAN_VAULT_PATH=./my-knowledge-library
+ENABLE_BOOK_STRUCTURE=true
 ```
 
-### MVP Validation Checklist
+## 🔒 Private Repository Setup
 
-- [ ] `/start` command responds
-- [ ] URL detection works for TikTok/Instagram
-- [ ] Railway API downloads videos
-- [ ] Gemini analyzes video content
-- [ ] Inline keyboard buttons function
+Want to keep your knowledge private while sharing the bot code?
+
+1. **Create a private GitHub repository** for your knowledge
+2. **Follow the detailed setup guide**: [PRIVATE_REPOSITORY_SETUP.md](./PRIVATE_REPOSITORY_SETUP.md)
+3. **Configure auto-sync** to your private repo
+
+This allows you to:
+- ✅ Share the bot code publicly
+- ✅ Keep your knowledge private
+- ✅ Auto-sync across devices
+- ✅ Version control your learning
+
+## 🌟 Community & Contributions
+
+- **⭐ Star this repository** if you find it useful
+- **🐛 Report bugs** via GitHub issues
+- **💡 Suggest features** for future versions
+- **🔧 Contribute code** via pull requests
+
+## 📄 License
+
+MIT License - feel free to use this bot for your own knowledge curation!
 - [ ] Claude enriches content
 - [ ] Markdown files save with categories
 
