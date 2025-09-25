@@ -1,6 +1,51 @@
-# 🤖 AI Knowledge Bot
+# � AI Knowledge Bot - Textbook Edition
 
-A powerful Python Telegram bot that transforms TikTok/Instagram videos into organized knowledge entries. Uses AI to analyze video content and automatically creates beautiful, searchable knowledge bases.
+A powerful Python Telegram bot that transforms TikTok/Instagram videos into **comprehensive, illustrated textbook-quality content**. Uses advanced AI to analyze video content and generate professional reference material with technical diagrams.🤖 AI Knowledge Bot
+
+A powerful Python Telegram bot that transforms TikTok/Instagram videos into organized knowledge entries. Uses AI to analyze video conten## 📦 Storage Modes
+
+### 📝 **Markdown Mode** (Default)
+- Simple markdown files in `./knowledge_base/`
+- Works with any text editor
+- Easy to backup and version control
+
+### 📖 **Book Mode** (Obsidian)
+- Beautiful book-like formatting
+- Auto-categorization into sections
+- Cross-references and navigation
+- Perfect for Obsidian users
+
+### 🗄️ **Notion Database Mode** (NEW!)
+- Cloud-based Notion database storage
+- Automatic categorization with emojis
+- Rich properties (tags, difficulty, tools)
+- Web access and mobile sync
+
+#### Notion Setup
+```bash
+# In your .env file
+USE_NOTION_STORAGE=true
+NOTION_API_KEY=secret_your_integration_key
+NOTION_DATABASE_ID=your_database_id_here
+```
+
+**Required Database Properties:**
+- Title (title)
+- Category (select) - Auto-categorized with emojis
+- Subcategory (select)
+- Tags (multi_select)
+- Tools Mentioned (multi_select)
+- Difficulty (select) - 🟢 Beginner, 🟡 Intermediate, 🔴 Advanced
+- Source Video (url)
+- Date Added (date)
+
+To enable Book Mode:
+```bash
+# In your .env file
+STORAGE_MODE=book
+OBSIDIAN_VAULT_PATH=./my-knowledge-library
+ENABLE_BOOK_STRUCTURE=true
+```creates beautiful, searchable knowledge bases.
 
 ## ✨ Features
 
@@ -9,16 +54,30 @@ A powerful Python Telegram bot that transforms TikTok/Instagram videos into orga
 - Handles multiple video formats automatically
 - Railway.app integration for reliable downloading
 
-### 🧠 **AI-Powered Analysis**
-- **Google Gemini 2.0 Flash** - Advanced video content analysis
-- **Claude 3.5 Sonnet** - Educational content enhancement
-- Extracts key concepts, tools, and learning points
+### 🧠 **Advanced AI-Powered Analysis**
+- **Google Gemini 1.5 Pro** - Comprehensive video content analysis with 20+ data fields
+- **Claude 3.5 Sonnet** - Textbook-quality content generation (2500-4000 words)
+- **Gemini 2.5 Flash Image Preview** - AI-generated technical diagrams and illustrations
+- Extracts category confidence, visual concepts, code snippets, performance metrics
 
-### 📚 **Beautiful Knowledge Organization**
-- **Book Mode**: Obsidian-optimized with elegant formatting
-- **Markdown Mode**: Simple files for any editor
-- Auto-categorization by subject and tools
-- Cross-references and navigation links
+### 📚 **Professional Reference Material**
+- **Textbook-Quality Content**: Comprehensive 3000+ word technical documentation
+- **AI-Generated Diagrams**: Up to 3 technical illustrations per entry
+- **Advanced Categorization**: Confidence scoring and auto-review flagging
+- **Multiple Storage Options**: Notion database, Obsidian books, or markdown files
+- **Cost Tracking**: Token usage monitoring and pricing analytics
+
+### 🎨 **New: AI-Generated Technical Diagrams**
+- **Gemini 2.5 Flash Image Preview** creates professional technical illustrations
+- Automatically detects diagram opportunities in content
+- Generates: flowcharts, system architectures, process diagrams, UI mockups
+- Embedded directly into textbook-quality content with proper captions
+
+### 📊 **Enhanced Analytics & Quality Control**
+- **Category Confidence Scoring**: Auto-flags uncertain classifications for review
+- **Content Quality Metrics**: Tracks comprehensive analysis depth (20+ fields)
+- **Cost Analytics**: Real-time token usage and pricing with OpenRouter integration
+- **Dynamic Category Management**: Learns and adapts categorization over time
 
 ### 🔒 **Privacy & Control**
 - Interactive approval system - you control what gets saved
@@ -40,13 +99,15 @@ Knowledge-Bot/
 │   └── handlers/
 │       └── video_handler.py # Video processing workflow
 ├── 📁 services/
-│   ├── railway_client.py    # Video download service
-│   ├── gemini_service.py    # AI video analysis
-│   ├── claude_service.py    # Content enrichment
-│   └── git_sync.py          # GitHub integration
+│   ├── railway_client.py           # Video download service  
+│   ├── gemini_service.py           # Comprehensive AI video analysis
+│   ├── claude_service.py           # Textbook-quality content generation
+│   ├── image_generation_service.py # AI-powered technical diagrams
+│   └── git_sync.py                 # GitHub integration
 ├── 📁 storage/
 │   ├── markdown_storage.py  # Simple markdown files
-│   └── book_storage.py      # Obsidian book format
+│   ├── book_storage.py      # Obsidian book format
+│   └── notion_storage.py    # Notion database integration
 ├── ⚙️ config.py             # Configuration management
 ├── 🚀 app.py               # Main application entry
 └── 📖 PRIVATE_REPOSITORY_SETUP.md  # Setup guide
@@ -115,14 +176,25 @@ The bot will start polling for messages. Send it a TikTok or Instagram URL to be
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| **Core AI Configuration** |
 | `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | Required |
 | `GEMINI_API_KEY` | Google Gemini API key | Required |
-| `GEMINI_MODEL` | Gemini model to use | `gemini-2.0-flash-exp` |
+| `GEMINI_MODEL` | Gemini model for analysis | `gemini-1.5-pro` |
 | `OPENROUTER_API_KEY` | OpenRouter API key | Required |
-| `OPENROUTER_MODEL` | Claude model via OpenRouter | `anthropic/claude-3.5-sonnet` |
+| `OPENROUTER_MODEL` | Claude model for content | `anthropic/claude-3.5-sonnet` |
+| **Image Generation** |
+| `IMAGE_MODEL` | Gemini model for diagrams | `google/gemini-2.5-flash-image-preview` |
+| `ENABLE_IMAGE_GENERATION` | Enable diagram generation | `true` |
+| `MAX_IMAGES_PER_ENTRY` | Max diagrams per entry | `3` |
+| **Content Quality** |
+| `TARGET_CONTENT_LENGTH` | Target word count | `3000` |
+| `MIN_CATEGORY_CONFIDENCE` | Category confidence threshold | `0.7` |
+| **Storage & Limits** |
 | `RAILWAY_API_URL` | Railway yt-dlp service URL | Optional |
-| `RAILWAY_API_KEY` | Railway API authentication | Optional |
 | `KNOWLEDGE_BASE_PATH` | Storage directory | `./knowledge_base` |
+| `USE_NOTION_STORAGE` | Enable Notion database | `false` |
+| `NOTION_API_KEY` | Notion integration token | Optional |
+| `NOTION_DATABASE_ID` | Target Notion database | Optional |
 | `MAX_VIDEO_DURATION_SECONDS` | Video length limit | `600` (10 min) |
 | `RATE_LIMIT_PER_HOUR` | Max videos per user | `10` |
 
