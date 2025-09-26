@@ -127,6 +127,7 @@ OPENROUTER_MAX_TOKENS=4000
 ### Common Issues
 - **Import Errors**: Check `requirements.txt` and Python version
 - **API Failures**: Verify API keys and quotas
+- **Gemini Model Errors**: Use Google AI Studio model names (`gemini-1.5-flash`, not Vertex AI names)
 - **Memory Issues**: Adjust token limits and video duration
 - **Storage Errors**: Check permissions and disk space
 

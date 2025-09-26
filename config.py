@@ -44,7 +44,7 @@ class Config:
     
     # AI Service Configuration - Enhanced for Textbook Quality
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")  # Better analysis than Flash
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")  # Use gemini-1.5-flash for Google AI Studio
     GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
     
     # OpenRouter Configuration (for Claude and Image Generation)

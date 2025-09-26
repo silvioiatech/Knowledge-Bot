@@ -179,7 +179,7 @@ The bot will start polling for messages. Send it a TikTok or Instagram URL to be
 | **Core AI Configuration** |
 | `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | Required |
 | `GEMINI_API_KEY` | Google Gemini API key | Required |
-| `GEMINI_MODEL` | Gemini model for analysis | `gemini-1.5-pro` |
+| `GEMINI_MODEL` | Gemini model for analysis | `gemini-1.5-flash` |
 | `OPENROUTER_API_KEY` | OpenRouter API key | Required |
 | `OPENROUTER_MODEL` | Claude model for content | `anthropic/claude-3.5-sonnet` |
 | **Image Generation** |
@@ -262,6 +262,33 @@ This allows you to:
 - ✅ Keep your knowledge private
 - ✅ Auto-sync across devices
 - ✅ Version control your learning
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**❌ Gemini Analysis Failed: Model Not Found**
+```
+404 Publisher Model `projects/generativelanguage-ga/...` was not found
+```
+- **Solution**: Use Google AI Studio model names, not Vertex AI names
+- **Correct models**: `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash-exp`
+- **Update**: `GEMINI_MODEL=gemini-1.5-flash` in your `.env` file
+
+**❌ OpenRouter API Errors**
+- **Check**: API key is valid and has credits
+- **Verify**: Model name is correct (`anthropic/claude-3.5-sonnet`)
+- **Solution**: Visit [OpenRouter](https://openrouter.ai) to check usage
+
+**❌ Railway Download Fails**
+- **Check**: `RAILWAY_API_URL` is correctly set
+- **Verify**: Railway service is deployed and running
+- **Alternative**: Leave `RAILWAY_API_URL` empty to use fallback methods
+
+**❌ Notion Storage Errors**
+- **Check**: Database ID and API key are correct
+- **Verify**: Integration has write permissions
+- **Required**: Database must have all required properties (see setup guide)
 
 ## 🌟 Community & Contributions
 
