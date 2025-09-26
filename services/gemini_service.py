@@ -232,7 +232,15 @@ class GeminiAnalyzer:
             
             # Parse JSON response and validate structure
             try:
-                analysis = json.loads(response.text.strip())
+                # Strip markdown code blocks if present
+                response_text = response.text.strip()
+                if response_text.startswith('```json'):
+                    response_text = response_text[7:]  # Remove ```json
+                if response_text.endswith('```'):
+                    response_text = response_text[:-3]  # Remove ```
+                response_text = response_text.strip()
+                
+                analysis = json.loads(response_text)
                 
                 # Validate and enrich analysis data
                 analysis = self._validate_and_enrich_analysis(analysis)

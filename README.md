@@ -281,6 +281,7 @@ This allows you to:
 - **Solution**: Visit [OpenRouter](https://openrouter.ai) to check usage
 
 **❌ Railway Download Fails**
+- **TikTok URLs**: May fail on first attempt (normal behavior), bot will retry automatically
 - **Check**: `RAILWAY_API_URL` is correctly set
 - **Verify**: Railway service is deployed and running
 - **Alternative**: Leave `RAILWAY_API_URL` empty to use fallback methods
