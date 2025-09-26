@@ -28,7 +28,7 @@ class ClaudeService:
             raise ClaudeEnrichmentError("OPENROUTER_API_KEY not configured")
             
         self.api_key = Config.OPENROUTER_API_KEY
-        self.model = Config.OPENROUTER_MODEL
+        self.model = Config.CLAUDE_MODEL
         self.base_url = Config.OPENROUTER_BASE_URL
         self.timeout = Config.CLAUDE_ENRICHMENT_TIMEOUT
     

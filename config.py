@@ -163,7 +163,7 @@ ERROR_MESSAGES = {
 PROGRESS_MESSAGES = {
     "downloading": "🔄 Downloading video...",
     "analyzing": f"🤖 Analyzing with {Config.GEMINI_MODEL.replace('gemini-', 'Gemini ')}...",
-    "enriching": f"✨ Creating comprehensive 5000-word guide with {Config.OPENROUTER_MODEL.split('/')[-1]}...",
+    "enriching": f"✨ Creating comprehensive guide with {Config.CLAUDE_MODEL.split('/')[-1]}...",
     "generating_diagrams": "🎨 Generating technical diagrams...",
     "saving": "💾 Saving comprehensive reference material...",
     "completed": "✅ Successfully created textbook-quality entry!",
