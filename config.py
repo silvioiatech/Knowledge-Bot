@@ -47,16 +47,31 @@ class Config:
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")  # Use gemini-1.5-flash for Google AI Studio
     GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
     
-    # OpenRouter Configuration (for Claude and Image Generation)
-    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
-    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")  # Keep Sonnet for quality
-    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))  # Reduced from 8192 to avoid cutoffs
-    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    # Claude Configuration (Anthropic Direct API)
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
     
-    # Image Generation Configuration
-    IMAGE_MODEL: str = os.getenv("IMAGE_MODEL", "google/gemini-2.5-flash-image-preview")
+    # OpenAI Configuration (for GPT assembly)
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    GPT_MODEL: str = os.getenv("GPT_MODEL", "gpt-4-1106-preview")
+    
+    # Banana API Configuration (for image generation)
+    BANANA_API_KEY: str = os.getenv("BANANA_API_KEY", "")
+    BANANA_MODEL_KEY: str = os.getenv("BANANA_MODEL_KEY", "")
+    
+    # Web Search Configuration (optional for fact-checking)
+    SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")  # Google Search API
+    
+    # Enhanced Image Generation Configuration
     ENABLE_IMAGE_GENERATION: bool = os.getenv("ENABLE_IMAGE_GENERATION", "true").lower() == "true"
-    MAX_IMAGES_PER_ENTRY: int = int(os.getenv("MAX_IMAGES_PER_ENTRY", "3"))  # Up to 3 diagrams per entry
+    MAX_IMAGES_PER_ENTRY: int = int(os.getenv("MAX_IMAGES_PER_ENTRY", "5"))  # Up to 5 diagrams per entry
+    IMAGE_QUALITY: str = os.getenv("IMAGE_QUALITY", "high")  # high, medium, low
+    
+    # Legacy OpenRouter (for fallback)
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     
     # Content Quality Configuration
     TARGET_CONTENT_LENGTH: int = int(os.getenv("TARGET_CONTENT_LENGTH", "5000"))  # Target word count (realistic for Claude 8K tokens)
@@ -83,15 +98,22 @@ class Config:
     NOTION_DATABASE_ID: str = os.getenv("NOTION_DATABASE_ID", "")
     USE_NOTION_STORAGE: bool = os.getenv("USE_NOTION_STORAGE", "false").lower() == "true"
     
+    # Pipeline Configuration
+    TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "./temp"))
+    ENABLE_WEB_RESEARCH: bool = os.getenv("ENABLE_WEB_RESEARCH", "false").lower() == "true"
+    ENABLE_FACT_CHECKING: bool = os.getenv("ENABLE_FACT_CHECKING", "false").lower() == "true"
+    
     # Limits
-    MAX_VIDEO_DURATION_SECONDS: int = _safe_int(os.getenv("MAX_VIDEO_DURATION_SECONDS"), "600")
+    MAX_VIDEO_DURATION_SECONDS: int = _safe_int(os.getenv("MAX_VIDEO_DURATION_SECONDS"), "1800")  # 30 minutes
     RATE_LIMIT_PER_HOUR: int = _safe_int(os.getenv("RATE_LIMIT_PER_HOUR"), "10")
     
-    # Timeouts
+    # Timeouts (increased for enhanced processing)
     RAILWAY_DOWNLOAD_TIMEOUT: int = _safe_int(os.getenv("RAILWAY_DOWNLOAD_TIMEOUT"), "300")
-    GEMINI_ANALYSIS_TIMEOUT: int = _safe_int(os.getenv("GEMINI_ANALYSIS_TIMEOUT"), "180")
+    GEMINI_ANALYSIS_TIMEOUT: int = _safe_int(os.getenv("GEMINI_ANALYSIS_TIMEOUT"), "300")  # Increased for research
     GEMINI_VIDEO_PROCESS_TIMEOUT: int = _safe_int(os.getenv("GEMINI_VIDEO_PROCESS_TIMEOUT"), "300")
-    CLAUDE_ENRICHMENT_TIMEOUT: int = _safe_int(os.getenv("CLAUDE_ENRICHMENT_TIMEOUT"), "120")
+    CLAUDE_ENRICHMENT_TIMEOUT: int = _safe_int(os.getenv("CLAUDE_ENRICHMENT_TIMEOUT"), "180")  # Increased for longer content
+    BANANA_IMAGE_TIMEOUT: int = _safe_int(os.getenv("BANANA_IMAGE_TIMEOUT"), "120")
+    GPT_ASSEMBLY_TIMEOUT: int = _safe_int(os.getenv("GPT_ASSEMBLY_TIMEOUT"), "120")
     
     # Cost Tracking Configuration
     ENABLE_COST_TRACKING: bool = os.getenv("ENABLE_COST_TRACKING", "true").lower() == "true"
@@ -103,7 +125,8 @@ class Config:
         required_vars = [
             "TELEGRAM_BOT_TOKEN",
             "GEMINI_API_KEY", 
-            "OPENROUTER_API_KEY"
+            "ANTHROPIC_API_KEY",
+            "OPENAI_API_KEY"
         ]
         
         missing_vars = []
@@ -157,5 +180,28 @@ SUPPORTED_PLATFORMS = {
 PRICING = {
     "gemini-1.5-pro": {"input": 0.00125, "output": 0.005},  # per 1k tokens
     "claude-3.5-sonnet": {"input": 0.003, "output": 0.015},  # per 1k tokens  
-    "gemini-2.5-flash-image": {"image": 0.039}  # per image
+    "gpt-4": {"input": 0.03, "output": 0.06},  # per 1k tokens
+    "banana-image": {"image": 0.05}  # per image
 }
+
+# Export commonly used configuration values for easy import
+TELEGRAM_BOT_TOKEN = Config.TELEGRAM_BOT_TOKEN
+RAILWAY_API_URL = Config.RAILWAY_API_URL
+RAILWAY_API_KEY = Config.RAILWAY_API_KEY
+GEMINI_API_KEY = Config.GEMINI_API_KEY
+GEMINI_MODEL = Config.GEMINI_MODEL
+ANTHROPIC_API_KEY = Config.ANTHROPIC_API_KEY
+CLAUDE_MODEL = Config.CLAUDE_MODEL
+OPENAI_API_KEY = Config.OPENAI_API_KEY
+GPT_MODEL = Config.GPT_MODEL
+BANANA_API_KEY = Config.BANANA_API_KEY
+BANANA_MODEL_KEY = Config.BANANA_MODEL_KEY
+SERPER_API_KEY = Config.SERPER_API_KEY
+NOTION_API_KEY = Config.NOTION_API_KEY
+NOTION_DATABASE_ID = Config.NOTION_DATABASE_ID
+KNOWLEDGE_BASE_PATH = Config.KNOWLEDGE_BASE_PATH
+TEMP_DIR = Config.TEMP_DIR
+
+# Legacy exports for compatibility
+OPENROUTER_API_KEY = Config.OPENROUTER_API_KEY
+OPENROUTER_MODEL = Config.OPENROUTER_MODEL
