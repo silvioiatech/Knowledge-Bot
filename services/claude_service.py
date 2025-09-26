@@ -75,7 +75,7 @@ class ClaudeService:
             raise ClaudeEnrichmentError(f"Enrichment failed: {e}")
     
     def _build_enrichment_prompt(self, analysis: Dict[str, Any]) -> str:
-        """Build aggressive prompt forcing complete content generation."""
+        """Build ultra-aggressive prompt forcing complete content generation."""
         title = analysis.get('title', 'Technical Guide')
         subject = analysis.get('subject', 'Technology')
         key_points = analysis.get('key_points', [])
@@ -84,14 +84,22 @@ class ClaudeService:
         points_text = '; '.join(key_points[:6]) if key_points else 'General concepts'
         tools_text = ', '.join(tools[:4]) if tools else 'Various tools'
 
-        return f"""Generate a COMPLETE comprehensive technical guide. Write the ENTIRE content now - no partial responses.
+        return f"""You are a technical documentation generator. Generate EXACTLY 5000 words of complete content. Do NOT ask questions. Do NOT suggest alternatives. Generate the full guide immediately.
+
+MANDATORY REQUIREMENTS:
+- Write EXACTLY 5000 words
+- NO conversational responses
+- NO "I can help you..." statements  
+- NO "Would you like to..." questions
+- COMPLETE all sections fully
+- Generate comprehensive technical content NOW
 
 TOPIC: {title}
 SUBJECT: {subject}
-CONCEPTS: {points_text}
+KEY CONCEPTS: {points_text}
 TOOLS: {tools_text}
 
-Write a complete guide with these sections:
+GENERATE THIS COMPLETE 5000-WORD TECHNICAL GUIDE:
 
 # {title}
 

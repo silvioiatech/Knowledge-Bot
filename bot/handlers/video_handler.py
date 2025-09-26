@@ -231,13 +231,13 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
                         title = analysis.get('title', 'Unknown Title')
                         diagram_info = f"\\n🎨 **Diagrams:** {len(diagrams)} technical diagrams generated" if diagrams else ""
                         
-                        success_msg = f"""✅ **Textbook-Quality Entry Created!**
+                        success_msg = f"""✅ **Comprehensive Technical Guide Created!**
 
 📝 **Title:** {title}
 🔗 **Notion Page:** [View Entry]({notion_url}){diagram_info}
-📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} comprehensive content
+📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} detailed content
 
-📚 Your professional reference material is ready!"""
+📚 Your professional reference guide is ready!"""
                         
                         await callback.message.edit_text(success_msg, parse_mode='Markdown')
                         
@@ -249,14 +249,14 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
                         title = analysis.get('title', 'Unknown Title')
                         diagram_info = f"\\n🎨 **Diagrams:** {len(diagrams)} technical diagrams generated" if diagrams else ""
                         
-                        success_msg = f"""✅ **Textbook-Quality Entry Created!**
+                        success_msg = f"""✅ **Comprehensive Technical Guide Created!**
 
 📝 **Title:** {title}
 📁 **Saved to:** Local Markdown file{diagram_info}
-📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} comprehensive content
+📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} detailed content
 
 ⚠️ *Note: Notion sync failed, saved locally instead*
-📚 Your professional reference material is ready!"""
+📚 Your professional reference guide is ready!"""
                         
                         await callback.message.edit_text(success_msg, parse_mode='Markdown')
                 else:

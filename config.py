@@ -50,7 +50,7 @@ class Config:
     # OpenRouter Configuration (for Claude and Image Generation)
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")  # Keep Sonnet for quality
-    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "20000"))  # Massive increase for textbook content
+    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "8192"))  # Claude's actual output limit
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     
     # Image Generation Configuration
@@ -59,7 +59,7 @@ class Config:
     MAX_IMAGES_PER_ENTRY: int = int(os.getenv("MAX_IMAGES_PER_ENTRY", "3"))  # Up to 3 diagrams per entry
     
     # Content Quality Configuration
-    TARGET_CONTENT_LENGTH: int = int(os.getenv("TARGET_CONTENT_LENGTH", "3000"))  # Target word count
+    TARGET_CONTENT_LENGTH: int = int(os.getenv("TARGET_CONTENT_LENGTH", "5000"))  # Target word count (realistic for Claude 8K tokens)
     MIN_CATEGORY_CONFIDENCE: float = float(os.getenv("MIN_CATEGORY_CONFIDENCE", "0.7"))  # Category confidence threshold
     
     # Storage Configuration
@@ -141,7 +141,7 @@ ERROR_MESSAGES = {
 PROGRESS_MESSAGES = {
     "downloading": "🔄 Downloading video...",
     "analyzing": f"🤖 Analyzing with {Config.GEMINI_MODEL.replace('gemini-', 'Gemini ')}...",
-    "enriching": f"✨ Creating textbook-quality content with {Config.OPENROUTER_MODEL.split('/')[-1]}...",
+    "enriching": f"✨ Creating comprehensive 5000-word guide with {Config.OPENROUTER_MODEL.split('/')[-1]}...",
     "generating_diagrams": "🎨 Generating technical diagrams...",
     "saving": "💾 Saving comprehensive reference material...",
     "completed": "✅ Successfully created textbook-quality entry!",

@@ -364,103 +364,126 @@ class NotionStorage:
         
         return blocks
     
+    async def _get_database_properties(self) -> Dict[str, Any]:
+        """Get the actual properties of the Notion database."""
+        try:
+            response = self.client.databases.retrieve(database_id=self.database_id)
+            return response.get('properties', {})
+        except Exception as e:
+            logger.warning(f"Failed to retrieve database schema: {e}")
+            return {}
+
     async def save_entry(self, content: str, metadata: Dict[str, Any]) -> str:
         """Save entry to Notion database and return page URL."""
         try:
             if not self.client:
                 raise ValueError("Notion client not initialized")
             
-            # Determine category and subcategory
+            # Get actual database properties to avoid errors
+            db_properties = await self._get_database_properties()
+            available_props = list(db_properties.keys())
+            
+            logger.info(f"Available Notion properties: {available_props}")
+            
+            # Determine category and difficulty
             category = self._determine_category(metadata)
-            subcategory = self._determine_subcategory(metadata, category)
             difficulty = self._determine_difficulty(metadata)
             
-            # Prepare properties for Notion page (only include existing properties)
-            properties = {
-                "Title": {
-                    "title": [{"type": "text", "text": {"content": metadata.get('title', 'Untitled')}}]
-                }
-            }
+            # Start with minimal required properties
+            properties = {}
             
-            # Add optional properties only if they likely exist
-            # These are common property names - adjust based on your actual Notion database schema
-            
-            # Try to add category
-            try:
-                properties["Category"] = {"select": {"name": category}}
-            except:
-                pass
-                
-            # Try to add source URL
-            if metadata.get('original_url'):
-                try:
-                    properties["Source"] = {"url": metadata.get('original_url', '')}
-                except:
-                    try:
-                        properties["URL"] = {"url": metadata.get('original_url', '')}
-                    except:
-                        try:
-                            properties["Source Video"] = {"url": metadata.get('original_url', '')}
-                        except:
-                            pass
-            
-            # Add optional properties with error handling
-            if metadata.get('tags'):
-                try:
-                    properties["Tags"] = {
-                        "multi_select": [{"name": tag} for tag in metadata['tags'][:10]]
-                    }
-                except:
-                    pass
-            
-            if metadata.get('tools'):
-                try:
-                    properties["Tools"] = {
-                        "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]
-                    }
-                except:
-                    try:
-                        properties["Tools Mentioned"] = {
-                            "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]
+            # Add title (required - try different possible names)
+            title_content = metadata.get('title', 'Untitled')
+            for title_prop in ['Title', 'Name', 'title', 'name']:
+                if title_prop in available_props:
+                    prop_config = db_properties[title_prop]
+                    if prop_config.get('type') == 'title':
+                        properties[title_prop] = {
+                            "title": [{"type": "text", "text": {"content": title_content}}]
                         }
-                    except:
-                        pass
+                        break
             
+            # Add other properties only if they exist in the database
+            if metadata.get('original_url'):
+                for url_prop in ['Source', 'URL', 'Source Video', 'Video URL', 'Link']:
+                    if url_prop in available_props:
+                        prop_config = db_properties[url_prop]
+                        if prop_config.get('type') == 'url':
+                            properties[url_prop] = {"url": metadata.get('original_url', '')}
+                            break
+            
+            # Category
+            for cat_prop in ['Category', 'Type', 'Subject', 'Topic']:
+                if cat_prop in available_props:
+                    prop_config = db_properties[cat_prop]
+                    if prop_config.get('type') == 'select':
+                        properties[cat_prop] = {"select": {"name": category}}
+                        break
+            
+            # Tags
+            if metadata.get('tags'):
+                for tag_prop in ['Tags', 'Labels', 'Keywords']:
+                    if tag_prop in available_props:
+                        prop_config = db_properties[tag_prop]
+                        if prop_config.get('type') == 'multi_select':
+                            properties[tag_prop] = {
+                                "multi_select": [{"name": tag} for tag in metadata['tags'][:10]]
+                            }
+                            break
+            
+            # Tools
+            if metadata.get('tools'):
+                for tools_prop in ['Tools', 'Tools Mentioned', 'Software', 'Technologies']:
+                    if tools_prop in available_props:
+                        prop_config = db_properties[tools_prop]
+                        if prop_config.get('type') == 'multi_select':
+                            properties[tools_prop] = {
+                                "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]
+                            }
+                            break
+            
+            # Platform
             if metadata.get('platform'):
-                try:
-                    properties["Platform"] = {
-                        "select": {"name": metadata['platform'].title()}
-                    }
-                except:
-                    pass
+                for platform_prop in ['Platform', 'Source Platform', 'Video Platform']:
+                    if platform_prop in available_props:
+                        prop_config = db_properties[platform_prop]
+                        if prop_config.get('type') == 'select':
+                            properties[platform_prop] = {
+                                "select": {"name": metadata['platform'].title()}
+                            }
+                            break
+            
+            # Difficulty
+            for diff_prop in ['Difficulty', 'Level', 'Complexity']:
+                if diff_prop in available_props:
+                    prop_config = db_properties[diff_prop]
+                    if prop_config.get('type') == 'select':
+                        properties[diff_prop] = {"select": {"name": difficulty}}
+                        break
+            
+            # Date
+            for date_prop in ['Date', 'Created', 'Added', 'Date Added']:
+                if date_prop in available_props:
+                    prop_config = db_properties[date_prop]
+                    if prop_config.get('type') == 'date':
+                        properties[date_prop] = {
+                            "date": {"start": datetime.now().isoformat()}
+                        }
+                        break
+            
+            logger.info(f"Using properties: {list(properties.keys())}")
             
             # Convert content to Notion blocks
             content_blocks = self._convert_markdown_to_blocks(content)
             
             # Create the page
-            logger.info(f"Creating Notion page: {metadata.get('title', 'Untitled')}")
+            logger.info(f"Creating Notion page: {title_content}")
             
-            try:
-                response = self.client.pages.create(
-                    parent={"database_id": self.database_id},
-                    properties=properties,
-                    children=content_blocks
-                )
-            except Exception as props_error:
-                # If properties fail, try with just the title
-                logger.warning(f"Properties failed, trying minimal approach: {props_error}")
-                
-                minimal_properties = {
-                    "Title": {
-                        "title": [{"type": "text", "text": {"content": metadata.get('title', 'Untitled')}}]
-                    }
-                }
-                
-                response = self.client.pages.create(
-                    parent={"database_id": self.database_id},
-                    properties=minimal_properties,
-                    children=content_blocks
-                )
+            response = self.client.pages.create(
+                parent={"database_id": self.database_id},
+                properties=properties,
+                children=content_blocks
+            )
             
             page_url = response.get('url', '')
             
@@ -472,10 +495,38 @@ class NotionStorage:
             error_msg = str(e)
             if "property" in error_msg.lower() and "not" in error_msg.lower():
                 logger.error(f"Notion database schema mismatch: {e}")
-                logger.info("Please check your Notion database has these properties: Title (title), Category (select), Source (url), Tags (multi-select)")
+                logger.info("The bot will automatically detect available properties in your database")
+                
+                # Try with absolutely minimal properties
+                try:
+                    minimal_properties = {}
+                    # Find any title property
+                    db_props = await self._get_database_properties()
+                    for prop_name, prop_config in db_props.items():
+                        if prop_config.get('type') == 'title':
+                            minimal_properties[prop_name] = {
+                                "title": [{"type": "text", "text": {"content": metadata.get('title', 'Untitled')}}]
+                            }
+                            break
+                    
+                    if minimal_properties:
+                        content_blocks = self._convert_markdown_to_blocks(content)
+                        response = self.client.pages.create(
+                            parent={"database_id": self.database_id},
+                            properties=minimal_properties,
+                            children=content_blocks
+                        )
+                        logger.success("Created page with minimal properties")
+                        return response.get('url', '')
+                    else:
+                        raise Exception("No title property found in database")
+                        
+                except Exception as minimal_error:
+                    logger.error(f"Even minimal page creation failed: {minimal_error}")
+                    raise
             else:
                 logger.error(f"Failed to save entry to Notion: {e}")
-            raise
+                raise
 
 
 # Integration function for the bot
