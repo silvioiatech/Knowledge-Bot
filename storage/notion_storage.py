@@ -487,7 +487,67 @@ class NotionStorage:
                         properties[diff_prop] = {"select": {"name": difficulty}}
                         break
             
-            # Date
+            # Content Quality - determine based on word count and completeness
+            content_quality = self._determine_content_quality(content, metadata)
+            if 'Content Quality' in available_props:
+                prop_config = db_properties['Content Quality']
+                if prop_config.get('type') == 'select':
+                    properties['Content Quality'] = {"select": {"name": content_quality}}
+            
+            # Cross References - analyze content for reference types
+            cross_references = self._determine_cross_references(content, metadata)
+            if 'Cross References' in available_props and cross_references:
+                prop_config = db_properties['Cross References']
+                if prop_config.get('type') == 'multi_select':
+                    properties['Cross References'] = {
+                        "multi_select": [{"name": ref} for ref in cross_references]
+                    }
+            
+            # Gemini Confidence - extract from analysis metadata
+            if 'Gemini Confidence' in available_props:
+                confidence = metadata.get('confidence_score', metadata.get('analysis_confidence', 85))
+                prop_config = db_properties['Gemini Confidence']
+                if prop_config.get('type') == 'number':
+                    properties['Gemini Confidence'] = {"number": confidence}
+            
+            # Key Points - format as readable text
+            if 'Key Points' in available_props and metadata.get('key_points'):
+                key_points_text = self._format_key_points(metadata.get('key_points', []))
+                prop_config = db_properties['Key Points']
+                if prop_config.get('type') == 'rich_text':
+                    properties['Key Points'] = {
+                        "rich_text": [{"type": "text", "text": {"content": key_points_text}}]
+                    }
+                elif prop_config.get('type') == 'text':
+                    properties['Key Points'] = {
+                        "rich_text": [{"type": "text", "text": {"content": key_points_text}}]
+                    }
+            
+            # Platform Specific - determine from content and tools
+            platform_specific = self._determine_platform_specific(content, metadata)
+            if 'Platform Specific' in available_props and platform_specific:
+                prop_config = db_properties['Platform Specific']
+                if prop_config.get('type') == 'multi_select':
+                    properties['Platform Specific'] = {
+                        "multi_select": [{"name": platform} for platform in platform_specific]
+                    }
+            
+            # Word Count - count actual words in generated content
+            if 'Word Count' in available_props:
+                word_count = len(content.split())
+                prop_config = db_properties['Word Count']
+                if prop_config.get('type') == 'number':
+                    properties['Word Count'] = {"number": word_count}
+            
+            # Processing Date - set to current date
+            if 'Processing Date' in available_props:
+                prop_config = db_properties['Processing Date']
+                if prop_config.get('type') == 'date':
+                    properties['Processing Date'] = {
+                        "date": {"start": datetime.now().isoformat()}
+                    }
+            
+            # Date (fallback for other date fields)
             for date_prop in ['Date', 'Created', 'Added', 'Date Added']:
                 if date_prop in available_props:
                     prop_config = db_properties[date_prop]
@@ -553,6 +613,120 @@ class NotionStorage:
             else:
                 logger.error(f"Failed to save entry to Notion: {e}")
                 raise
+
+    def _determine_content_quality(self, content: str, metadata: Dict[str, Any]) -> str:
+        """Determine content quality based on word count, completeness, and structure."""
+        word_count = len(content.split())
+        
+        # Check for structure indicators
+        has_headers = '##' in content or '#' in content
+        has_code = '```' in content
+        has_examples = any(word in content.lower() for word in ['example', 'implementation', 'usage'])
+        has_best_practices = 'best practice' in content.lower() or 'recommended' in content.lower()
+        
+        # Quality scoring
+        quality_score = 0
+        
+        # Word count scoring
+        if word_count >= 2500:
+            quality_score += 3
+        elif word_count >= 1500:
+            quality_score += 2
+        elif word_count >= 800:
+            quality_score += 1
+        
+        # Structure scoring
+        if has_headers:
+            quality_score += 1
+        if has_code:
+            quality_score += 1
+        if has_examples:
+            quality_score += 1
+        if has_best_practices:
+            quality_score += 1
+        
+        # Determine quality level
+        if quality_score >= 6:
+            return "⭐⭐⭐⭐⭐ Production Ready"
+        elif quality_score >= 5:
+            return "⭐⭐⭐⭐ Excellent"
+        elif quality_score >= 3:
+            return "⭐⭐⭐ Good"
+        elif quality_score >= 2:
+            return "⭐⭐ Basic"
+        else:
+            return "⭐ Raw"
+    
+    def _determine_cross_references(self, content: str, metadata: Dict[str, Any]) -> List[str]:
+        """Determine cross-reference types based on content analysis."""
+        references = []
+        content_lower = content.lower()
+        
+        # Check for prerequisites
+        if any(word in content_lower for word in ['prerequisite', 'requirement', 'before', 'setup', 'install']):
+            references.append("Prerequisites")
+        
+        # Check for related topics
+        if any(word in content_lower for word in ['related', 'similar', 'also see', 'alternative', 'comparison']):
+            references.append("Related")
+        
+        # Check for advanced topics
+        if any(word in content_lower for word in ['advanced', 'complex', 'enterprise', 'production', 'optimization']):
+            references.append("Advanced Topics")
+        
+        return references
+    
+    def _format_key_points(self, key_points: List[str]) -> str:
+        """Format key points as readable numbered list."""
+        if not key_points:
+            return ""
+        
+        formatted_points = []
+        for i, point in enumerate(key_points[:8], 1):  # Limit to 8 points
+            # Clean up the point
+            clean_point = point.strip()
+            if not clean_point.endswith('.'):
+                clean_point += '.'
+            formatted_points.append(f"{i}. {clean_point}")
+        
+        return '\n'.join(formatted_points)
+    
+    def _determine_platform_specific(self, content: str, metadata: Dict[str, Any]) -> List[str]:
+        """Determine platform specificity from content and metadata."""
+        platforms = []
+        content_lower = content.lower()
+        tools = [tool.lower() for tool in metadata.get('tools', [])]
+        title_lower = metadata.get('title', '').lower()
+        
+        # Combine text for analysis
+        all_text = f"{content_lower} {' '.join(tools)} {title_lower}"
+        
+        # Platform detection
+        if any(word in all_text for word in ['macos', 'mac os', 'apple', 'xcode', 'homebrew', 'finder']):
+            platforms.append("macOS")
+        
+        if any(word in all_text for word in ['linux', 'ubuntu', 'debian', 'fedora', 'centos', 'bash', 'apt', 'yum']):
+            platforms.append("Linux")
+        
+        if any(word in all_text for word in ['windows', 'powershell', 'cmd', 'chocolatey', 'winget']):
+            platforms.append("Windows")
+        
+        if any(word in all_text for word in ['ios', 'iphone', 'ipad', 'swift', 'objective-c']):
+            platforms.append("iOS")
+        
+        if any(word in all_text for word in ['android', 'kotlin', 'java', 'gradle']):
+            platforms.append("Android")
+        
+        # If no specific platforms detected, check for universal indicators
+        if not platforms:
+            if any(word in all_text for word in ['cross-platform', 'multiplatform', 'universal', 'web', 'browser', 'cloud']):
+                platforms.append("Universal")
+        
+        # Default to Universal if still no platforms and content seems general
+        if not platforms and len(content.split()) > 500:
+            platforms.append("Universal")
+        
+        return platforms
 
 
 # Integration function for the bot

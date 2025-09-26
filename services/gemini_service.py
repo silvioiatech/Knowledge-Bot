@@ -310,6 +310,41 @@ class GeminiAnalyzer:
             if logger:
                 logger.warning(f"Low category confidence: {analysis['category_confidence']:.2f}")
         
+        # Calculate overall confidence score
+        confidence_factors = []
+        
+        # Content completeness (0-30 points)
+        if analysis.get('title') and analysis['title'] != 'Unknown Title':
+            confidence_factors.append(10)
+        if len(analysis.get('key_points', [])) >= 3:
+            confidence_factors.append(10)
+        if len(analysis.get('tools', [])) >= 1:
+            confidence_factors.append(10)
+        
+        # Structure quality (0-25 points)
+        if len(analysis.get('code_snippets', [])) > 0:
+            confidence_factors.append(8)
+        if len(analysis.get('visual_concepts', [])) > 0:
+            confidence_factors.append(8)
+        if analysis.get('problem_context'):
+            confidence_factors.append(9)
+        
+        # Category confidence (0-25 points)
+        category_conf = analysis.get('category_confidence', 0)
+        confidence_factors.append(int(category_conf * 25))
+        
+        # Technical depth (0-20 points)
+        if len(analysis.get('prerequisites', [])) > 0:
+            confidence_factors.append(7)
+        if len(analysis.get('performance_notes', [])) > 0:
+            confidence_factors.append(7)
+        if analysis.get('production_ready'):
+            confidence_factors.append(6)
+        
+        # Calculate final confidence (0-100)
+        total_confidence = min(100, sum(confidence_factors))
+        analysis['confidence_score'] = total_confidence
+        
         # Add metadata
         analysis['analysis_timestamp'] = asyncio.get_event_loop().time()
         analysis['gemini_model'] = Config.GEMINI_MODEL
