@@ -182,12 +182,15 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
     if not callback.data:
         return
     
+    # Answer callback immediately to prevent timeout
+    await callback.answer()
+    
     user_id = callback.from_user.id if callback.from_user else 0
     data = await state.get_data()
     analysis = data.get("analysis")
     
     if not analysis:
-        await callback.answer("❌ Analysis data not found")
+        await callback.message.edit_text("❌ Analysis data not found")
         return
     
     try:
@@ -243,8 +246,19 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
                             logger.error(f"Notion storage failed: {notion_error}, falling back to local storage")
                         # Fallback to local storage
                         file_path = await save_knowledge_entry(enriched_content, analysis)
-                        success_msg = f"{PROGRESS_MESSAGES['completed']}\\n\\n📁 Saved to: <code>{file_path}</code>"
-                        await callback.message.edit_text(success_msg)
+                        title = analysis.get('title', 'Unknown Title')
+                        diagram_info = f"\\n🎨 **Diagrams:** {len(diagrams)} technical diagrams generated" if diagrams else ""
+                        
+                        success_msg = f"""✅ **Textbook-Quality Entry Created!**
+
+📝 **Title:** {title}
+📁 **Saved to:** Local Markdown file{diagram_info}
+📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} comprehensive content
+
+⚠️ *Note: Notion sync failed, saved locally instead*
+📚 Your professional reference material is ready!"""
+                        
+                        await callback.message.edit_text(success_msg, parse_mode='Markdown')
                 else:
                     # Use local storage
                     file_path = await save_knowledge_entry(enriched_content, analysis)
@@ -287,4 +301,4 @@ async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
     finally:
         # Clear state
         await state.clear()
-        await callback.answer()
+        # Callback already answered at the beginning

@@ -375,45 +375,64 @@ class NotionStorage:
             subcategory = self._determine_subcategory(metadata, category)
             difficulty = self._determine_difficulty(metadata)
             
-            # Prepare properties for Notion page
+            # Prepare properties for Notion page (only include existing properties)
             properties = {
                 "Title": {
                     "title": [{"type": "text", "text": {"content": metadata.get('title', 'Untitled')}}]
-                },
-                "Category": {
-                    "select": {"name": category}
-                },
-                "Subcategory": {
-                    "select": {"name": subcategory}
-                },
-                "Difficulty": {
-                    "select": {"name": difficulty}
-                },
-                "Source Video": {
-                    "url": metadata.get('original_url', '')
-                },
-                "Date Added": {
-                    "date": {"start": datetime.now().isoformat()}
                 }
             }
             
-            # Add tags if present
+            # Add optional properties only if they likely exist
+            # These are common property names - adjust based on your actual Notion database schema
+            
+            # Try to add category
+            try:
+                properties["Category"] = {"select": {"name": category}}
+            except:
+                pass
+                
+            # Try to add source URL
+            if metadata.get('original_url'):
+                try:
+                    properties["Source"] = {"url": metadata.get('original_url', '')}
+                except:
+                    try:
+                        properties["URL"] = {"url": metadata.get('original_url', '')}
+                    except:
+                        try:
+                            properties["Source Video"] = {"url": metadata.get('original_url', '')}
+                        except:
+                            pass
+            
+            # Add optional properties with error handling
             if metadata.get('tags'):
-                properties["Tags"] = {
-                    "multi_select": [{"name": tag} for tag in metadata['tags'][:10]]  # Limit to 10 tags
-                }
+                try:
+                    properties["Tags"] = {
+                        "multi_select": [{"name": tag} for tag in metadata['tags'][:10]]
+                    }
+                except:
+                    pass
             
-            # Add tools mentioned if present
             if metadata.get('tools'):
-                properties["Tools Mentioned"] = {
-                    "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]  # Limit to 10 tools
-                }
+                try:
+                    properties["Tools"] = {
+                        "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]
+                    }
+                except:
+                    try:
+                        properties["Tools Mentioned"] = {
+                            "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]
+                        }
+                    except:
+                        pass
             
-            # Add platform if present
             if metadata.get('platform'):
-                properties["Platform"] = {
-                    "select": {"name": metadata['platform'].title()}
-                }
+                try:
+                    properties["Platform"] = {
+                        "select": {"name": metadata['platform'].title()}
+                    }
+                except:
+                    pass
             
             # Convert content to Notion blocks
             content_blocks = self._convert_markdown_to_blocks(content)
@@ -421,11 +440,27 @@ class NotionStorage:
             # Create the page
             logger.info(f"Creating Notion page: {metadata.get('title', 'Untitled')}")
             
-            response = self.client.pages.create(
-                parent={"database_id": self.database_id},
-                properties=properties,
-                children=content_blocks
-            )
+            try:
+                response = self.client.pages.create(
+                    parent={"database_id": self.database_id},
+                    properties=properties,
+                    children=content_blocks
+                )
+            except Exception as props_error:
+                # If properties fail, try with just the title
+                logger.warning(f"Properties failed, trying minimal approach: {props_error}")
+                
+                minimal_properties = {
+                    "Title": {
+                        "title": [{"type": "text", "text": {"content": metadata.get('title', 'Untitled')}}]
+                    }
+                }
+                
+                response = self.client.pages.create(
+                    parent={"database_id": self.database_id},
+                    properties=minimal_properties,
+                    children=content_blocks
+                )
             
             page_url = response.get('url', '')
             
@@ -434,7 +469,12 @@ class NotionStorage:
             return page_url
             
         except Exception as e:
-            logger.error(f"Failed to save entry to Notion: {e}")
+            error_msg = str(e)
+            if "property" in error_msg.lower() and "not" in error_msg.lower():
+                logger.error(f"Notion database schema mismatch: {e}")
+                logger.info("Please check your Notion database has these properties: Title (title), Category (select), Source (url), Tags (multi-select)")
+            else:
+                logger.error(f"Failed to save entry to Notion: {e}")
             raise
 
 
