@@ -6,7 +6,7 @@ import re
 import httpx
 from loguru import logger
 
-from config import OPENAI_API_KEY, GPT_MODEL
+from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, GPT_MODEL, GPT_MAX_TOKENS
 from core.models.content_models import (
     GeminiAnalysis, ClaudeOutput, GeneratedImage, NotionPayload
 )
@@ -19,11 +19,14 @@ class GPTAssemblyProcessor:
         self.http_client = httpx.AsyncClient(
             timeout=60.0,
             headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json"
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/silvioiatech/knowledge-bot",
+                "X-Title": "Knowledge Bot"
             }
         )
         self.model = GPT_MODEL
+        self.base_url = OPENROUTER_BASE_URL
     
     async def assemble_final_content(
         self,
@@ -443,7 +446,7 @@ Return the optimized content with improved structure and formatting.
         }
         
         response = await self.http_client.post(
-            "https://api.openai.com/v1/chat/completions",
+            f"{self.base_url}/chat/completions",
             json=payload
         )
         

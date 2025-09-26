@@ -82,12 +82,12 @@ knowledge-bot/
 # Core APIs
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 GEMINI_API_KEY=your_gemini_api_key
-ANTHROPIC_API_KEY=your_claude_api_key
-OPENAI_API_KEY=your_openai_api_key
+
+# *** IMPORTANT: All AI models use OpenRouter ***
+OPENROUTER_API_KEY=your_openrouter_api_key
 
 # Optional Services
 RAILWAY_API_URL=your_railway_api_url
-BANANA_API_KEY=your_banana_api_key
 SERPER_API_KEY=your_google_search_api_key
 
 # Notion Integration
@@ -105,20 +105,18 @@ TARGET_CONTENT_LENGTH=3000
 ### Optional Configuration
 
 ```bash
-# Model Selection
+# AI Models via OpenRouter
+CLAUDE_MODEL=anthropic/claude-3.5-sonnet
+GPT_MODEL=openai/gpt-4-1106-preview
+IMAGE_MODEL=black-forest-labs/flux-1.1-pro
+
+# Gemini Model (direct API)
 GEMINI_MODEL=gemini-1.5-flash
-CLAUDE_MODEL=claude-3-5-sonnet-20241022
-GPT_MODEL=gpt-4-1106-preview
 
-# Limits & Timeouts
-MAX_VIDEO_DURATION_SECONDS=1800
-RATE_LIMIT_PER_HOUR=10
-GEMINI_ANALYSIS_TIMEOUT=300
-CLAUDE_ENRICHMENT_TIMEOUT=180
-
-# Storage
-TEMP_DIR=./temp
-KNOWLEDGE_BASE_PATH=./knowledge_base
+# Token Limits
+CLAUDE_MAX_TOKENS=8000
+GPT_MAX_TOKENS=4000
+GEMINI_MAX_TOKENS=8192
 ```
 
 ## 🚀 Quick Start

@@ -47,17 +47,19 @@ class Config:
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")  # Use gemini-1.5-flash for Google AI Studio
     GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
     
-    # Claude Configuration (Anthropic Direct API)
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
+    # OpenRouter Configuration (for Claude, GPT, and Image Generation)
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     
-    # OpenAI Configuration (for GPT assembly)
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    GPT_MODEL: str = os.getenv("GPT_MODEL", "gpt-4-1106-preview")
+    # Model Configuration via OpenRouter
+    CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "anthropic/claude-3.5-sonnet")
+    GPT_MODEL: str = os.getenv("GPT_MODEL", "openai/gpt-4-1106-preview")
+    IMAGE_MODEL: str = os.getenv("IMAGE_MODEL", "black-forest-labs/flux-1.1-pro")  # Image generation via OpenRouter
     
-    # Banana API Configuration (for image generation)
-    BANANA_API_KEY: str = os.getenv("BANANA_API_KEY", "")
-    BANANA_MODEL_KEY: str = os.getenv("BANANA_MODEL_KEY", "")
+    # Token Limits
+    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))
+    CLAUDE_MAX_TOKENS: int = int(os.getenv("CLAUDE_MAX_TOKENS", "8000"))
+    GPT_MAX_TOKENS: int = int(os.getenv("GPT_MAX_TOKENS", "4000"))
     
     # Web Search Configuration (optional for fact-checking)
     SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")  # Google Search API
@@ -67,11 +69,9 @@ class Config:
     MAX_IMAGES_PER_ENTRY: int = int(os.getenv("MAX_IMAGES_PER_ENTRY", "5"))  # Up to 5 diagrams per entry
     IMAGE_QUALITY: str = os.getenv("IMAGE_QUALITY", "high")  # high, medium, low
     
-    # Legacy OpenRouter (for fallback)
-    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
-    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
-    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))
-    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    # Legacy API Keys (for direct API access if needed)
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")  # Optional fallback
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")  # Optional fallback
     
     # Content Quality Configuration
     TARGET_CONTENT_LENGTH: int = int(os.getenv("TARGET_CONTENT_LENGTH", "5000"))  # Target word count (realistic for Claude 8K tokens)
@@ -125,8 +125,7 @@ class Config:
         required_vars = [
             "TELEGRAM_BOT_TOKEN",
             "GEMINI_API_KEY", 
-            "ANTHROPIC_API_KEY",
-            "OPENAI_API_KEY"
+            "OPENROUTER_API_KEY"
         ]
         
         missing_vars = []
@@ -190,18 +189,17 @@ RAILWAY_API_URL = Config.RAILWAY_API_URL
 RAILWAY_API_KEY = Config.RAILWAY_API_KEY
 GEMINI_API_KEY = Config.GEMINI_API_KEY
 GEMINI_MODEL = Config.GEMINI_MODEL
-ANTHROPIC_API_KEY = Config.ANTHROPIC_API_KEY
+OPENROUTER_API_KEY = Config.OPENROUTER_API_KEY
+OPENROUTER_BASE_URL = Config.OPENROUTER_BASE_URL
 CLAUDE_MODEL = Config.CLAUDE_MODEL
-OPENAI_API_KEY = Config.OPENAI_API_KEY
 GPT_MODEL = Config.GPT_MODEL
-BANANA_API_KEY = Config.BANANA_API_KEY
-BANANA_MODEL_KEY = Config.BANANA_MODEL_KEY
+IMAGE_MODEL = Config.IMAGE_MODEL
 SERPER_API_KEY = Config.SERPER_API_KEY
 NOTION_API_KEY = Config.NOTION_API_KEY
 NOTION_DATABASE_ID = Config.NOTION_DATABASE_ID
 KNOWLEDGE_BASE_PATH = Config.KNOWLEDGE_BASE_PATH
 TEMP_DIR = Config.TEMP_DIR
 
-# Legacy exports for compatibility
-OPENROUTER_API_KEY = Config.OPENROUTER_API_KEY
-OPENROUTER_MODEL = Config.OPENROUTER_MODEL
+# Legacy direct API keys (optional fallbacks)
+ANTHROPIC_API_KEY = Config.ANTHROPIC_API_KEY
+OPENAI_API_KEY = Config.OPENAI_API_KEY

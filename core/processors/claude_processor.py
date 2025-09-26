@@ -6,7 +6,7 @@ import re
 import httpx
 from loguru import logger
 
-from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, CLAUDE_MODEL, CLAUDE_MAX_TOKENS
 from core.models.content_models import (
     GeminiAnalysis, ClaudeOutput, ImagePlan
 )
@@ -19,12 +19,14 @@ class EnhancedClaudeProcessor:
         self.http_client = httpx.AsyncClient(
             timeout=60.0,
             headers={
-                "x-api-key": ANTHROPIC_API_KEY,
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
-                "anthropic-version": "2023-06-01"
+                "HTTP-Referer": "https://github.com/silvioiatech/knowledge-bot",
+                "X-Title": "Knowledge Bot"
             }
         )
         self.model = CLAUDE_MODEL
+        self.base_url = OPENROUTER_BASE_URL
     
     async def generate_textbook_content(
         self,
@@ -186,21 +188,21 @@ Generate the full, comprehensive guide following the structure above. Write subs
         
         payload = {
             "model": self.model,
-            "max_tokens": 8000,  # Increased for comprehensive content
+            "max_tokens": CLAUDE_MAX_TOKENS,  # Use configured token limit
             "temperature": 0.3,
             "messages": messages
         }
         
         try:
             response = await self.http_client.post(
-                "https://api.anthropic.com/v1/messages",
+                f"{self.base_url}/chat/completions",
                 json=payload
             )
             
             response.raise_for_status()
             result = response.json()
             
-            content = result['content'][0]['text']
+            content = result['choices'][0]['message']['content']
             
             # Check if content appears truncated
             if self._is_content_truncated(content):
@@ -264,14 +266,14 @@ CONTINUE FROM WHERE THIS LEFT OFF:
         
         try:
             response = await self.http_client.post(
-                "https://api.anthropic.com/v1/messages",
+                f"{self.base_url}/chat/completions",
                 json=payload
             )
             
             response.raise_for_status()
             result = response.json()
             
-            continuation = result['content'][0]['text']
+            continuation = result['choices'][0]['message']['content']
             
             # Combine original and continuation
             complete_content = partial_content + "\n\n" + continuation
@@ -370,21 +372,21 @@ Return the enhanced version of the complete content.
         
         payload = {
             "model": self.model,
-            "max_tokens": 8000,
+            "max_tokens": CLAUDE_MAX_TOKENS,
             "temperature": 0.2,
             "messages": messages
         }
         
         try:
             response = await self.http_client.post(
-                "https://api.anthropic.com/v1/messages",
+                f"{self.base_url}/chat/completions",
                 json=payload
             )
             
             response.raise_for_status()
             result = response.json()
             
-            return result['content'][0]['text']
+            return result['choices'][0]['message']['content']
             
         except Exception as e:
             logger.warning(f"Content enhancement failed: {e}")
@@ -435,14 +437,14 @@ Write in a professional, engaging tone suitable for a knowledge base preview.
         
         try:
             response = await self.http_client.post(
-                "https://api.anthropic.com/v1/messages",
+                f"{self.base_url}/chat/completions",
                 json=payload
             )
             
             response.raise_for_status()
             result = response.json()
             
-            return result['content'][0]['text']
+            return result['choices'][0]['message']['content']
             
         except Exception as e:
             logger.error(f"Summary generation failed: {e}")
