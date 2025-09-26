@@ -50,7 +50,7 @@ class Config:
     # OpenRouter Configuration (for Claude and Image Generation)
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")  # Keep Sonnet for quality
-    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "8192"))  # Claude's actual output limit
+    OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))  # Reduced from 8192 to avoid cutoffs
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     
     # Image Generation Configuration

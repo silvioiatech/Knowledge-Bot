@@ -120,20 +120,32 @@ class NotionStorage:
     
     def _determine_subcategory(self, metadata: Dict[str, Any], category: str) -> str:
         """Determine subcategory based on category and metadata."""
-        tools = metadata.get('tools', [])
-        tags = metadata.get('tags', [])
+        tools = [t.lower() for t in metadata.get('tools', [])]
+        tags = [t.lower() for t in metadata.get('tags', [])]
+        title = metadata.get('title', '').lower()
+        key_points = ' '.join(metadata.get('key_points', [])).lower()
+        
+        # Combine all text for better detection
+        all_text = f"{title} {' '.join(tools)} {' '.join(tags)} {key_points}"
         
         if category == "🤖 AI":
-            if any(tool.lower() in ['chatgpt', 'gpt', 'openai'] for tool in tools):
-                return "ChatGPT/OpenAI"
-            elif any(tool.lower() in ['claude', 'anthropic'] for tool in tools):
-                return "Claude/Anthropic"
-            elif any(tool.lower() in ['gemini', 'google'] for tool in tools):
-                return "Gemini/Google"
-            elif any(tag.lower() in ['machine learning', 'ml'] for tag in tags):
-                return "Machine Learning"
+            # Check for specific AI subcategories
+            if any(word in all_text for word in ['agent', 'multi-agent', 'autonomous', 'orchestration']):
+                return "Agents"
+            elif any(word in all_text for word in ['chatgpt', 'gpt-4', 'openai']):
+                return "Programs"  
+            elif any(word in all_text for word in ['automation', 'workflow', 'pipeline']):
+                return "Automations"
+            elif any(word in all_text for word in ['claude', 'anthropic']):
+                return "Programs"
+            elif any(word in all_text for word in ['gemini', 'bard', 'google ai']):
+                return "Programs"
+            elif any(word in all_text for word in ['llm', 'language model', 'transformer']):
+                return "Models"
+            elif any(word in all_text for word in ['prompt', 'prompting']):
+                return "Prompting"
             else:
-                return "General AI"
+                return "General"
         
         elif category == "💻 PROGRAMMING":
             if any(tool.lower() in ['python'] for tool in tools):
@@ -385,9 +397,13 @@ class NotionStorage:
             
             logger.info(f"Available Notion properties: {available_props}")
             
-            # Determine category and difficulty
+            # Determine category, subcategory and difficulty
             category = self._determine_category(metadata)
+            subcategory = self._determine_subcategory(metadata, category)
             difficulty = self._determine_difficulty(metadata)
+            
+            if logger:
+                logger.info(f"Category: {category}, Subcategory: {subcategory}")
             
             # Start with minimal required properties
             properties = {}
@@ -418,6 +434,16 @@ class NotionStorage:
                     prop_config = db_properties[cat_prop]
                     if prop_config.get('type') == 'select':
                         properties[cat_prop] = {"select": {"name": category}}
+                        break
+            
+            # Add subcategory - CHECK FOR EXACT PROPERTY NAME IN YOUR DATABASE
+            for sub_prop in ['Subcategory', 'Sub-category', 'SubCategory']:
+                if sub_prop in available_props:
+                    prop_config = db_properties[sub_prop]
+                    if prop_config.get('type') == 'select':
+                        properties[sub_prop] = {"select": {"name": subcategory}}
+                        if logger:
+                            logger.info(f"Setting subcategory: {subcategory}")
                         break
             
             # Tags
