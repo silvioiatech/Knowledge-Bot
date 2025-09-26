@@ -452,8 +452,22 @@ class NotionStorage:
                     if tag_prop in available_props:
                         prop_config = db_properties[tag_prop]
                         if prop_config.get('type') == 'multi_select':
+                            # Handle both list and string formats
+                            tags_list = metadata['tags']
+                            if isinstance(tags_list, str):
+                                # Split comma-separated string and clean up
+                                tags_list = [tag.strip() for tag in tags_list.split(',')]
+                            
+                            # Clean up tag names to avoid Notion validation errors
+                            cleaned_tags = []
+                            for tag in tags_list[:10]:
+                                # Remove commas and limit length
+                                clean_tag = str(tag).replace(',', ' -').strip()[:100]
+                                if clean_tag:
+                                    cleaned_tags.append(clean_tag)
+                            
                             properties[tag_prop] = {
-                                "multi_select": [{"name": tag} for tag in metadata['tags'][:10]]
+                                "multi_select": [{"name": tag} for tag in cleaned_tags]
                             }
                             break
             
@@ -463,8 +477,22 @@ class NotionStorage:
                     if tools_prop in available_props:
                         prop_config = db_properties[tools_prop]
                         if prop_config.get('type') == 'multi_select':
+                            # Handle both list and string formats
+                            tools_list = metadata['tools']
+                            if isinstance(tools_list, str):
+                                # Split comma-separated string and clean up
+                                tools_list = [tool.strip() for tool in tools_list.split(',')]
+                            
+                            # Clean up tool names to avoid Notion validation errors
+                            cleaned_tools = []
+                            for tool in tools_list[:10]:
+                                # Remove commas and limit length
+                                clean_tool = str(tool).replace(',', ' -').strip()[:100]
+                                if clean_tool:
+                                    cleaned_tools.append(clean_tool)
+                            
                             properties[tools_prop] = {
-                                "multi_select": [{"name": tool} for tool in metadata['tools'][:10]]
+                                "multi_select": [{"name": tool} for tool in cleaned_tools]
                             }
                             break
             

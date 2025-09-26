@@ -166,11 +166,33 @@ class KnowledgeBotPipeline:
             return []
         
         # Analyze content for image generation appropriateness
-        content_analysis = {
-            'word_count': len(" ".join([seg.text for seg in analysis.transcript])),
-            'difficulty': analysis.content_outline.difficulty_level,
-            'technical_complexity': len([e for e in analysis.entities if e.type == 'technology'])
-        }
+        try:
+            # Handle both TranscriptSegment objects and dict format
+            if analysis.transcript and len(analysis.transcript) > 0:
+                if hasattr(analysis.transcript[0], 'text'):
+                    # TranscriptSegment objects
+                    transcript_text = " ".join([seg.text for seg in analysis.transcript])
+                elif isinstance(analysis.transcript[0], dict):
+                    # Dict format
+                    transcript_text = " ".join([seg.get('text', '') for seg in analysis.transcript])
+                else:
+                    # Fallback to string representation
+                    transcript_text = " ".join([str(seg) for seg in analysis.transcript])
+            else:
+                transcript_text = ""
+                
+            content_analysis = {
+                'word_count': len(transcript_text),
+                'difficulty': analysis.content_outline.difficulty_level,
+                'technical_complexity': len([e for e in analysis.entities if e.type == 'technology'])
+            }
+        except Exception as e:
+            logger.warning(f"Error processing transcript for content analysis: {e}")
+            content_analysis = {
+                'word_count': 1000,  # Default fallback
+                'difficulty': 'medium',
+                'technical_complexity': 3
+            }
         
         # Generate images if appropriate
         generated_images = await self.banana_processor.process_all_images(

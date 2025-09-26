@@ -123,7 +123,22 @@ class GeminiAnalysis:
     def _generate_content_hash(self) -> str:
         """Generate unique hash for content deduplication."""
         # Use video URL + transcript text for hashing
-        transcript_text = " ".join([seg.text for seg in self.transcript])
+        try:
+            if self.transcript and len(self.transcript) > 0:
+                if hasattr(self.transcript[0], 'text'):
+                    # TranscriptSegment objects
+                    transcript_text = " ".join([seg.text for seg in self.transcript])
+                elif isinstance(self.transcript[0], dict):
+                    # Dict format
+                    transcript_text = " ".join([seg.get('text', '') for seg in self.transcript])
+                else:
+                    # Fallback to string representation
+                    transcript_text = " ".join([str(seg) for seg in self.transcript])
+            else:
+                transcript_text = ""
+        except Exception:
+            transcript_text = "fallback_content"
+            
         content_for_hash = f"{self.video_metadata.url}|{transcript_text[:1000]}"
         return hashlib.sha256(content_for_hash.encode()).hexdigest()[:16]
     
@@ -144,11 +159,11 @@ class GeminiAnalysis:
             },
             "transcript": [
                 {
-                    "start_time": seg.start_time,
-                    "end_time": seg.end_time,
-                    "text": seg.text,
-                    "speaker": seg.speaker,
-                    "confidence": seg.confidence
+                    "start_time": seg.start_time if hasattr(seg, 'start_time') else seg.get('start_time', 0),
+                    "end_time": seg.end_time if hasattr(seg, 'end_time') else seg.get('end_time', 0),
+                    "text": seg.text if hasattr(seg, 'text') else seg.get('text', ''),
+                    "speaker": seg.speaker if hasattr(seg, 'speaker') else seg.get('speaker', ''),
+                    "confidence": seg.confidence if hasattr(seg, 'confidence') else seg.get('confidence', 1.0)
                 } for seg in self.transcript
             ],
             "entities": [
