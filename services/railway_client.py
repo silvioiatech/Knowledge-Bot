@@ -38,30 +38,46 @@ class RailwayClient:
         """Download video and return local file path."""
         logger.info(f"Starting Railway download request for URL: {video_url}")
         
-        try:
-            # Start download request
-            request_id = await self._start_download(video_url)
-            
-            # Poll for completion
-            logger.info(f"Starting to poll download status for request_id: {request_id}")
-            download_response = await self._poll_download_status(request_id)
-            
-            # Download file locally
-            file_url = download_response['file_url']
-            local_path = await self.download_file(file_url)
-            
-            logger.success(f"Railway download completed successfully for request_id: {request_id}")
-            return local_path
-            
-        except Exception as e:
-            logger.error(f"Railway download error: {e}")
-            raise RailwayClientError(f"Download failed: {e}")
+        # Try different format selectors if initial download fails
+        format_selectors = ["best/worst", "worst", "best[height<=720]", "mp4"]
+        
+        for attempt, format_selector in enumerate(format_selectors, 1):
+            try:
+                logger.info(f"Download attempt {attempt}/{len(format_selectors)} with format: {format_selector}")
+                
+                # Start download request
+                request_id = await self._start_download(video_url, format_selector)
+                
+                # Poll for completion
+                logger.info(f"Starting to poll download status for request_id: {request_id}")
+                download_response = await self._poll_download_status(request_id)
+                
+                # Download file locally
+                file_url = download_response['file_url']
+                local_path = await self.download_file(file_url)
+                
+                logger.success(f"Railway download completed successfully for request_id: {request_id}")
+                return local_path
+                
+            except RailwayClientError as e:
+                if "yt-dlp failed" in str(e) and attempt < len(format_selectors):
+                    logger.warning(f"Attempt {attempt} failed with yt-dlp error, trying next format selector...")
+                    await asyncio.sleep(2)  # Brief delay between attempts
+                    continue
+                else:
+                    logger.error(f"Railway download error: {e}")
+                    raise RailwayClientError(f"Download failed: {e}")
+            except Exception as e:
+                logger.error(f"Railway download error: {e}")
+                raise RailwayClientError(f"Download failed: {e}")
+        
+        raise RailwayClientError("All download attempts failed")
     
-    async def _start_download(self, video_url: str) -> str:
+    async def _start_download(self, video_url: str, format_selector: str = "best/worst") -> str:
         """Start video download request."""
         payload = {
             "url": video_url,
-            "format": "best/worst",
+            "format": format_selector,
             "path": "videos/{safe_title}-{id}.{ext}"
         }
         
@@ -140,6 +156,10 @@ class RailwayClient:
         logger.info(f"Downloading video file from {file_url}")
         
         try:
+            # Ensure URL has proper protocol
+            if not file_url.startswith(('http://', 'https://')):
+                file_url = f"https://{file_url}"
+            
             # Generate unique local filename
             file_id = str(uuid.uuid4())[:8]
             local_path = Path(Config.TEMP_DIR) / f"video_{file_id}.mp4"
