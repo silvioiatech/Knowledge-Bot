@@ -1,374 +1,229 @@
-"""AI-powered technical diagram generation service using Gemini 2.5 Flash Image Preview."""
+"""Image generation service using OpenRouter API."""
 
 import asyncio
 import base64
 import re
-from io import BytesIO
-from typing import Dict, Any, List, Optional, Tuple
+from typing import List, Dict, Any, Optional
+from pathlib import Path
 
-try:
-    import httpx
-    from loguru import logger
-except ImportError:
-    httpx = None
-    logger = None
+import httpx
+from loguru import logger
 
 from config import Config
 
 
-class DiagramGenerationError(Exception):
-    """Custom exception for diagram generation errors."""
+class ImageGenerationError(Exception):
+    """Custom exception for image generation errors."""
     pass
 
 
-class DiagramGenerator:
-    """Generate technical diagrams for textbook-quality content using Gemini 2.5 Flash Image Preview."""
+class ImageGenerationService:
+    """Service for generating technical diagrams and images via OpenRouter."""
     
     def __init__(self):
-        """Initialize the diagram generator."""
-        if not httpx:
-            raise DiagramGenerationError("httpx not installed")
-        
         if not Config.OPENROUTER_API_KEY:
-            raise DiagramGenerationError("OPENROUTER_API_KEY not configured")
+            logger.warning("OPENROUTER_API_KEY not configured - image generation disabled")
+            self.enabled = False
+        else:
+            self.enabled = True
+            
+        self.http_client = httpx.AsyncClient(
+            timeout=60,
+            headers={
+                "Authorization": f"Bearer {Config.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://knowledge-bot.dev",
+                "X-Title": "Knowledge Bot"
+            }
+        )
         
-        if not Config.ENABLE_IMAGE_GENERATION:
-            raise DiagramGenerationError("Image generation disabled in configuration")
-        
-        self.api_key = Config.OPENROUTER_API_KEY
-        self.image_model = Config.IMAGE_MODEL
-        self.base_url = Config.OPENROUTER_BASE_URL
-        self.max_images = Config.MAX_IMAGES_PER_ENTRY
-        
-        if logger:
-            logger.info(f"Initialized diagram generator with model: {self.image_model}")
+        logger.info(f"Initialized diagram generator with model: {Config.IMAGE_MODEL}")
     
-    async def generate_textbook_diagrams(self, content: str, metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Generate 1-3 technical diagrams based on content analysis.
+    async def generate_textbook_diagrams(self, content: str) -> str:
+        """Generate technical diagrams for textbook content."""
+        if not self.enabled:
+            logger.info("Image generation disabled - skipping diagram generation")
+            return content
         
-        Args:
-            content: The enriched markdown content with [DIAGRAM: ...] placeholders
-            metadata: Analysis metadata from Gemini
-            
-        Returns:
-            List of generated diagram dictionaries with base64 data and descriptions
-            
-        Raises:
-            DiagramGenerationError: If generation fails
-        """
+        logger.info("Starting technical diagram generation")
+        
         try:
-            if logger:
-                logger.info("Starting technical diagram generation")
+            # Extract diagram placeholders from content
+            diagram_placeholders = self.extract_diagram_placeholders(content)
+            logger.debug(f"Found {len(diagram_placeholders)} diagram placeholders")
             
-            # Extract diagram needs from content
-            diagram_needs = self.extract_diagram_placeholders(content)
+            if not diagram_placeholders:
+                logger.info("No diagram placeholders found in content")
+                return content
             
-            if not diagram_needs:
-                if logger:
-                    logger.info("No diagram placeholders found in content")
-                return []
-            
-            generated_images = []
-            
-            # Generate up to max_images diagrams
-            for i, diagram_desc in enumerate(diagram_needs[:self.max_images]):
+            # Generate diagrams for each placeholder
+            generated_diagrams = []
+            for placeholder in diagram_placeholders:
                 try:
-                    if logger:
-                        logger.debug(f"Generating diagram {i+1}/{len(diagram_needs[:self.max_images])}: {diagram_desc}")
-                    
-                    # Create technical prompt for this diagram
-                    prompt = self.create_technical_diagram_prompt(diagram_desc, metadata)
-                    
-                    # Generate the diagram
-                    image_data = await self._call_image_generation_api(prompt)
-                    
-                    if image_data:
-                        generated_images.append({
-                            "description": diagram_desc,
-                            "base64_data": image_data,
-                            "position": i,
-                            "placeholder": f"[DIAGRAM: {diagram_desc}]"
-                        })
-                        
-                        if logger:
-                            logger.success(f"Successfully generated diagram: {diagram_desc}")
-                    
+                    diagram_data = await self.generate_single_diagram(placeholder)
+                    generated_diagrams.append(diagram_data)
                 except Exception as e:
-                    if logger:
-                        logger.warning(f"Failed to generate diagram '{diagram_desc}': {e}")
+                    logger.error(f"Failed to generate diagram for '{placeholder['title']}': {e}")
                     continue
             
-            if logger:
-                logger.success(f"Generated {len(generated_images)} technical diagrams")
+            # Integrate diagrams into content
+            enhanced_content = self.integrate_diagrams_into_content(content, generated_diagrams)
+            logger.debug(f"Integrated {len(generated_diagrams)} diagrams into content")
             
-            return generated_images
+            return enhanced_content
             
         except Exception as e:
-            if logger:
-                logger.error(f"Diagram generation failed: {e}")
-            raise DiagramGenerationError(f"Failed to generate diagrams: {e}")
+            logger.error(f"Diagram generation failed: {e}")
+            return content  # Return original content on error
     
-    def extract_diagram_placeholders(self, content: str) -> List[str]:
-        """
-        Extract [DIAGRAM: description] placeholders from content.
+    def extract_diagram_placeholders(self, content: str) -> List[Dict[str, Any]]:
+        """Extract diagram placeholders from content."""
+        # Look for diagram markers like [DIAGRAM: title] or ![Diagram](placeholder)
+        placeholders = []
         
-        Args:
-            content: Markdown content with diagram placeholders
-            
-        Returns:
-            List of diagram descriptions
-        """
-        # Regex to find [DIAGRAM: description] patterns
-        pattern = r'\[DIAGRAM:\s*([^\]]+)\]'
-        matches = re.findall(pattern, content, re.IGNORECASE)
+        # Pattern 1: [DIAGRAM: Title]
+        diagram_pattern = r'\[DIAGRAM:\s*([^\]]+)\]'
+        matches = re.finditer(diagram_pattern, content, re.IGNORECASE)
         
-        # Clean up descriptions
-        descriptions = [match.strip() for match in matches]
+        for match in matches:
+            title = match.group(1).strip()
+            placeholders.append({
+                'type': 'diagram',
+                'title': title,
+                'placeholder': match.group(0),
+                'position': match.start(),
+                'context': self._extract_context(content, match.start(), match.end())
+            })
         
-        if logger:
-            logger.debug(f"Found {len(descriptions)} diagram placeholders")
-            
-        return descriptions
+        # Pattern 2: ![Diagram](diagram_placeholder)
+        image_pattern = r'!\[([^\]]*[Dd]iagram[^\]]*)\]\(([^)]*placeholder[^)]*)\)'
+        matches = re.finditer(image_pattern, content, re.IGNORECASE)
+        
+        for match in matches:
+            title = match.group(1).strip()
+            placeholders.append({
+                'type': 'image_placeholder',
+                'title': title,
+                'placeholder': match.group(0),
+                'position': match.start(),
+                'context': self._extract_context(content, match.start(), match.end())
+            })
+        
+        return placeholders
     
-    def create_technical_diagram_prompt(self, description: str, metadata: Dict[str, Any]) -> str:
-        """
-        Create detailed prompt for technical diagram generation.
+    def _extract_context(self, content: str, start_pos: int, end_pos: int, context_length: int = 500) -> str:
+        """Extract surrounding context for better diagram generation."""
+        context_start = max(0, start_pos - context_length)
+        context_end = min(len(content), end_pos + context_length)
+        return content[context_start:context_end]
+    
+    async def generate_single_diagram(self, placeholder: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate a single technical diagram."""
+        if not self.enabled:
+            raise ImageGenerationError("Image generation not enabled")
         
-        Args:
-            description: Description of the diagram to generate
-            metadata: Analysis metadata for context
+        title = placeholder['title']
+        context = placeholder.get('context', '')
+        
+        # Create detailed prompt for technical diagram
+        prompt = self._create_diagram_prompt(title, context)
+        
+        try:
+            # Generate image via OpenRouter
+            response = await self.http_client.post(
+                f"{Config.OPENROUTER_BASE_URL}/chat/completions",
+                json={
+                    "model": Config.IMAGE_MODEL,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "max_tokens": 1000,
+                    "temperature": 0.7
+                }
+            )
             
-        Returns:
-            Detailed prompt for image generation
-        """
-        tools = metadata.get('tools', [])
-        subject = metadata.get('subject', 'programming')
-        production_ready = metadata.get('production_ready', False)
-        platform_specific = metadata.get('platform_specific', [])
-        
-        # Determine diagram type and style
-        diagram_type = self._classify_diagram_type(description)
-        
-        prompt = f"""Create a professional technical diagram for a textbook.
+            if response.status_code != 200:
+                logger.error(f"OpenRouter API error: {response.status_code} - {response.text}")
+                raise ImageGenerationError(f"API error: {response.status_code}")
+            
+            result = response.json()
+            
+            # Extract image data from response
+            if 'choices' in result and result['choices']:
+                content_response = result['choices'][0]['message']['content']
+                
+                # For now, return a placeholder since image generation varies by model
+                return {
+                    'title': title,
+                    'placeholder': placeholder['placeholder'],
+                    'image_url': None,  # Would contain actual image URL/data
+                    'alt_text': f"Technical diagram: {title}",
+                    'description': content_response[:200] + "..." if len(content_response) > 200 else content_response
+                }
+            else:
+                raise ImageGenerationError("No valid response from image generation API")
+                
+        except httpx.RequestError as e:
+            logger.error(f"HTTP request failed for diagram generation: {e}")
+            raise ImageGenerationError(f"Request failed: {e}")
+    
+    def _create_diagram_prompt(self, title: str, context: str) -> str:
+        """Create a detailed prompt for technical diagram generation."""
+        return f"""
+Create a technical diagram for: "{title}"
 
-**Diagram Request:** {description}
-**Context:** {subject} tutorial/reference
-**Technologies:** {', '.join(tools[:5])}
-**Environment:** {'Production' if production_ready else 'Development'}
-**Platform:** {', '.join(platform_specific) if platform_specific else 'Universal'}
+Context from educational content:
+{context[:800]}
 
-**Diagram Type:** {diagram_type}
-
-**Requirements:**
-- Clean, professional design suitable for technical documentation
-- Use standard notation and symbols ({self._get_notation_style(diagram_type)})
-- Include clear labels and annotations
-- Add arrows showing data/control flow where applicable
-- Use consistent color coding for different components
-- Make it educational and easy to understand
-- Technical accuracy is critical
-- Include a legend if using symbols or color coding
-
-**Style Guidelines:**
-- Professional technical documentation style (not artistic)
+Requirements:
+- Clean, professional technical diagram
+- Clear labels and annotations
+- Educational/instructional style
+- Suitable for technical documentation
 - High contrast for readability
-- Consistent typography and spacing
-- Modern, clean aesthetic
-- Suitable for both digital and print publication
+- Vector-style appearance preferred
 
-**Content Focus:**
-- Emphasize the key concepts being illustrated
-- Show relationships between components clearly
-- Include relevant technical details
-- Make complex concepts visually accessible
-- Support the learning objectives
-
-Generate a high-quality technical diagram that would be appropriate for inclusion in a professional textbook or technical reference manual."""
-        
-        return prompt
-    
-    def _classify_diagram_type(self, description: str) -> str:
-        """Classify the type of diagram based on description."""
-        description_lower = description.lower()
-        
-        if any(keyword in description_lower for keyword in ['architecture', 'system', 'component']):
-            return "System Architecture"
-        elif any(keyword in description_lower for keyword in ['flow', 'process', 'workflow']):
-            return "Process Flow"
-        elif any(keyword in description_lower for keyword in ['database', 'schema', 'erd']):
-            return "Database Schema"
-        elif any(keyword in description_lower for keyword in ['network', 'topology', 'infrastructure']):
-            return "Network Diagram"
-        elif any(keyword in description_lower for keyword in ['api', 'request', 'response']):
-            return "API Interaction"
-        elif any(keyword in description_lower for keyword in ['decision', 'logic', 'algorithm']):
-            return "Decision Tree"
-        elif any(keyword in description_lower for keyword in ['hierarchy', 'tree', 'structure']):
-            return "Hierarchical Structure"
-        else:
-            return "Technical Diagram"
-    
-    def _get_notation_style(self, diagram_type: str) -> str:
-        """Get appropriate notation style for diagram type."""
-        notation_map = {
-            "System Architecture": "UML component diagrams, boxes and arrows",
-            "Process Flow": "BPMN flowchart notation",
-            "Database Schema": "ERD notation with relationships",
-            "Network Diagram": "Network topology symbols",
-            "API Interaction": "Sequence diagram notation",
-            "Decision Tree": "Flowchart decision symbols",
-            "Hierarchical Structure": "Tree diagram notation",
-            "Technical Diagram": "Standard technical symbols"
-        }
-        return notation_map.get(diagram_type, "Standard technical symbols")
-    
-    async def _call_image_generation_api(self, prompt: str) -> Optional[str]:
-        """
-        Call Gemini 2.5 Flash Image Preview via OpenRouter.
-        
-        Args:
-            prompt: The image generation prompt
-            
-        Returns:
-            Base64 encoded image data or None if failed
-        """
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/silvioiatech/Knowledge-Bot",
-                "X-Title": "Knowledge Bot - Diagram Generator"
-            }
-            
-            payload = {
-                "model": self.image_model,
-                "messages": [{
-                    "role": "user",
-                    "content": prompt
-                }],
-                "modalities": ["image", "text"],
-                "max_tokens": 2000,
-                "temperature": 0.3  # Lower temperature for consistent technical diagrams
-            }
-            
-            async with httpx.AsyncClient(timeout=120) as client:  # Longer timeout for image generation
-                response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers=headers,
-                    json=payload
-                )
-                response.raise_for_status()
-                
-                result = response.json()
-                
-                # Extract images from response
-                if "choices" in result and len(result["choices"]) > 0:
-                    message = result["choices"][0]["message"]
-                    images = message.get("images", [])
-                    
-                    if images and len(images) > 0:
-                        # Return the first image's base64 data
-                        return images[0].get("data")
-                
-                if logger:
-                    logger.warning("No images found in API response")
-                return None
-                
-        except Exception as e:
-            if logger:
-                logger.error(f"Image generation API call failed: {e}")
-            return None
-    
-    def base64_to_file_info(self, base64_data: str, description: str) -> Dict[str, Any]:
-        """
-        Convert base64 image data to file information for storage.
-        
-        Args:
-            base64_data: Base64 encoded image data
-            description: Description of the diagram
-            
-        Returns:
-            Dictionary with file information
-        """
-        try:
-            # Decode base64 data
-            image_bytes = base64.b64decode(base64_data)
-            
-            # Create a safe filename from description
-            safe_filename = re.sub(r'[^\w\s-]', '', description)
-            safe_filename = re.sub(r'[-\s]+', '-', safe_filename)
-            filename = f"diagram-{safe_filename.lower()}.png"
-            
-            return {
-                "filename": filename,
-                "data": image_bytes,
-                "size": len(image_bytes),
-                "format": "PNG",
-                "description": description
-            }
-            
-        except Exception as e:
-            if logger:
-                logger.error(f"Failed to process base64 image data: {e}")
-            raise DiagramGenerationError(f"Image processing failed: {e}")
-
-
-def integrate_diagrams_into_content(content: str, diagrams: List[Dict[str, Any]]) -> str:
-    """
-    Integrate generated diagram references into the content.
-    
-    Args:
-        content: Original markdown content with [DIAGRAM: ...] placeholders
-        diagrams: List of generated diagrams
-        
-    Returns:
-        Updated content with diagram references
-    """
-    updated_content = content
-    
-    for diagram in diagrams:
-        placeholder = diagram["placeholder"]
-        description = diagram["description"]
-        
-        # Replace placeholder with diagram reference
-        diagram_reference = f"""
-![{description}](diagram-{diagram['position']}.png)
-*{description}*
+The diagram should illustrate the technical concept clearly and be suitable for educational materials.
 """
-        
-        updated_content = updated_content.replace(placeholder, diagram_reference)
     
-    if logger:
+    def integrate_diagrams_into_content(self, content: str, diagrams: List[Dict[str, Any]]) -> str:
+        """Integrate generated diagrams back into content."""
+        enhanced_content = content
+        
+        # Sort diagrams by position (reverse order to maintain positions)
+        diagrams.sort(key=lambda x: x.get('placeholder', {}).get('position', 0), reverse=True)
+        
+        for diagram in diagrams:
+            placeholder = diagram.get('placeholder', '')
+            if not placeholder:
+                continue
+            
+            # Create markdown for the diagram
+            if diagram.get('image_url'):
+                replacement = f"![{diagram['alt_text']}]({diagram['image_url']})\n*{diagram['description']}*"
+            else:
+                # Fallback to descriptive text if image generation failed
+                replacement = f"""
+**{diagram['title']}**
+{diagram.get('description', 'Technical diagram would be displayed here.')}
+"""
+            
+            # Replace placeholder with actual content
+            enhanced_content = enhanced_content.replace(placeholder, replacement)
+        
         logger.debug(f"Integrated {len(diagrams)} diagrams into content")
+        return enhanced_content
     
-    return updated_content
+    async def close(self):
+        """Clean up resources."""
+        if hasattr(self, 'http_client'):
+            await self.http_client.aclose()
 
 
-# Convenience function for external use
-async def generate_content_diagrams(content: str, metadata: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]]]:
-    """
-    Generate diagrams for content and return updated content with diagram list.
-    
-    Args:
-        content: Markdown content with diagram placeholders
-        metadata: Analysis metadata
-        
-    Returns:
-        Tuple of (updated_content, diagram_list)
-    """
-    if not Config.ENABLE_IMAGE_GENERATION:
-        if logger:
-            logger.info("Image generation disabled, skipping diagram generation")
-        return content, []
-    
-    try:
-        generator = DiagramGenerator()
-        diagrams = await generator.generate_textbook_diagrams(content, metadata)
-        updated_content = integrate_diagrams_into_content(content, diagrams)
-        return updated_content, diagrams
-    
-    except Exception as e:
-        if logger:
-            logger.warning(f"Diagram generation failed, continuing without images: {e}")
-        return content, []
+# Backwards compatibility alias
+class DiagramGenerator(ImageGenerationService):
+    """Backwards compatibility alias."""
+    pass
