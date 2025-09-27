@@ -80,13 +80,20 @@ class EnhancedGeminiService:
     async def _analyze_video_content(self, video_path: str, video_url: str, platform: str) -> Dict[str, Any]:
         """Perform initial video content analysis."""
         
-        # Upload video to Gemini
-        logger.debug("Uploading video to Gemini...")
-        video_file = genai.upload_file(video_path)
-        
-        # Wait for processing
-        logger.debug("Waiting for video processing...")
-        await self._wait_for_processing(video_file)
+        try:
+            # Upload video to Gemini using newer API
+            logger.debug("Uploading video to Gemini...")
+            video_file = await asyncio.to_thread(genai.upload_file, video_path)
+            
+            # Wait for processing
+            logger.debug("Waiting for video processing...")
+            await self._wait_for_processing(video_file)
+            
+        except Exception as upload_error:
+            logger.error(f"Video upload failed: {upload_error}")
+            # Fallback: create a text-based analysis without video upload
+            logger.info("Falling back to metadata-based analysis...")
+            return await self._create_fallback_analysis(video_path, video_url, platform)
         
         # Analysis prompt focused on extracting research-worthy concepts
         analysis_prompt = """
@@ -166,7 +173,7 @@ Ensure all technical terms are captured for research verification.
         
         # Clean up uploaded file
         try:
-            genai.delete_file(video_file.name)
+            await asyncio.to_thread(genai.delete_file, video_file.name)
         except Exception as cleanup_error:
             logger.warning(f"Failed to cleanup uploaded file: {cleanup_error}")
         
@@ -233,8 +240,8 @@ Ensure all technical terms are captured for research verification.
                     ],
                     "key_findings": [
                         f"Industry standard approach for {query}",
-                        f"Common implementation patterns",
-                        f"Performance considerations"
+                        "Common implementation patterns",
+                        "Performance considerations"
                     ],
                     "verification_status": "researched"
                 }
@@ -359,7 +366,7 @@ Ensure all technical terms are captured for research verification.
         elapsed_time = 0
         
         while elapsed_time < max_wait_time:
-            file_info = genai.get_file(video_file.name)
+            file_info = await asyncio.to_thread(genai.get_file, video_file.name)
             
             if file_info.state.name == "ACTIVE":
                 logger.debug("Video processing completed")
@@ -372,6 +379,53 @@ Ensure all technical terms are captured for research verification.
             elapsed_time += check_interval
         
         raise GeminiAnalysisError(f"Video processing timeout after {max_wait_time} seconds")
+    
+    async def _create_fallback_analysis(self, video_path: str, video_url: str, platform: str) -> Dict[str, Any]:
+        """Create a fallback analysis when video upload fails."""
+        logger.info("Creating fallback analysis based on video metadata...")
+        
+        # Create basic analysis structure
+        fallback_analysis = {
+            "video_metadata": {
+                "title": f"Video from {platform}",
+                "main_topic": "General Technical Content", 
+                "author_expertise": "unknown",
+                "target_audience": "general",
+                "duration_seconds": 30,  # Estimate
+                "language": "en"
+            },
+            "transcript": [
+                {"start_time": 0.0, "end_time": 30.0, "text": "Video content analysis unavailable - using fallback mode", "speaker": "system", "confidence": 0.5}
+            ],
+            "technical_concepts": [
+                {"name": "Video Content", "type": "media", "context": f"Downloaded from {platform}", "importance": "medium"}
+            ],
+            "factual_claims": [],
+            "knowledge_gaps": [
+                {"topic": "Video Content Analysis", "reason": "Video upload to AI service failed", "priority": "high"}
+            ],
+            "educational_objectives": {
+                "primary_learning_goals": ["Review video content manually"],
+                "prerequisites": ["Basic technical knowledge"],
+                "difficulty_level": "beginner",
+                "estimated_learning_time": "5 minutes"
+            },
+            "content_outline": {
+                "main_sections": ["Video Overview", "Manual Review Required"],
+                "key_points": ["Video downloaded successfully", "AI analysis unavailable"],
+                "practical_examples": []
+            },
+            "quality_assessment": {
+                "content_clarity": 0.5,
+                "technical_accuracy_confidence": 0.3,
+                "educational_value": 0.4,
+                "completeness": 0.3,
+                "overall_quality": 0.4
+            }
+        }
+        
+        logger.info("Fallback analysis created - manual review recommended")
+        return fallback_analysis
     
     async def close(self):
         """Clean up resources."""

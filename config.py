@@ -39,6 +39,9 @@ class Config:
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     
+    # Anthropic Direct API (fallback)
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    
     # Model Configuration via OpenRouter
     CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "anthropic/claude-3.5-sonnet")
     GPT_MODEL: str = os.getenv("GPT_MODEL", "openai/gpt-4")
@@ -160,3 +163,4 @@ NOTION_API_KEY = Config.NOTION_API_KEY
 NOTION_DATABASE_ID = Config.NOTION_DATABASE_ID
 TEMP_DIR = Config.TEMP_DIR
 KNOWLEDGE_BASE_PATH = Config.KNOWLEDGE_BASE_PATH
+ANTHROPIC_API_KEY = Config.ANTHROPIC_API_KEY
