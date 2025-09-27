@@ -46,6 +46,8 @@ class Config:
     
     # Token limits
     OPENROUTER_MAX_TOKENS: int = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))
+    CLAUDE_MAX_TOKENS: int = int(os.getenv("CLAUDE_MAX_TOKENS", "8000"))
+    GPT_MAX_TOKENS: int = int(os.getenv("GPT_MAX_TOKENS", "4000"))
     
     # File Storage Configuration  
     TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "/tmp/knowledge_bot"))
@@ -60,6 +62,7 @@ class Config:
     GITHUB_USERNAME: str = os.getenv("GITHUB_USERNAME", "")
     GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
     PRIVATE_REPO_PATH: str = os.getenv("PRIVATE_REPO_PATH", "")
+    GIT_AUTO_COMMIT: bool = os.getenv("GIT_AUTO_COMMIT", "false").lower() == "true"
     AUTO_COMMIT: bool = os.getenv("AUTO_COMMIT", "false").lower() == "true"
     AUTO_PUSH: bool = os.getenv("AUTO_PUSH", "false").lower() == "true"
     
@@ -146,9 +149,14 @@ RAILWAY_API_KEY = Config.RAILWAY_API_KEY
 GEMINI_API_KEY = Config.GEMINI_API_KEY
 GEMINI_MODEL = Config.GEMINI_MODEL
 OPENROUTER_API_KEY = Config.OPENROUTER_API_KEY
+OPENROUTER_BASE_URL = Config.OPENROUTER_BASE_URL
+OPENROUTER_MAX_TOKENS = Config.OPENROUTER_MAX_TOKENS
 CLAUDE_MODEL = Config.CLAUDE_MODEL
+CLAUDE_MAX_TOKENS = Config.CLAUDE_MAX_TOKENS
 GPT_MODEL = Config.GPT_MODEL
+GPT_MAX_TOKENS = Config.GPT_MAX_TOKENS
 IMAGE_MODEL = Config.IMAGE_MODEL
 NOTION_API_KEY = Config.NOTION_API_KEY
+NOTION_DATABASE_ID = Config.NOTION_DATABASE_ID
 TEMP_DIR = Config.TEMP_DIR
 KNOWLEDGE_BASE_PATH = Config.KNOWLEDGE_BASE_PATH
