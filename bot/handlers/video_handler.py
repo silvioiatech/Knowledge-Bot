@@ -24,14 +24,33 @@ from core.pipeline import KnowledgeBotPipeline
 # Router for video handlers
 router = Router()
 
-# Service instances
-railway_client = RailwayClient()
-gemini_service = EnhancedGeminiService()
-claude_service = ClaudeService()
-image_service = ImageGenerationService()
-markdown_storage = MarkdownStorage()
-notion_storage = NotionStorage()
-pipeline = KnowledgeBotPipeline()
+# Service instances - initialized lazily
+railway_client = None
+gemini_service = None
+claude_service = None
+image_service = None
+markdown_storage = None
+notion_storage = None
+pipeline = None
+
+
+def get_services():
+    """Initialize services lazily."""
+    global railway_client, gemini_service, claude_service, image_service
+    global markdown_storage, notion_storage, pipeline
+    
+    if railway_client is None:
+        railway_client = RailwayClient()
+        gemini_service = EnhancedGeminiService()
+        claude_service = ClaudeService()
+        image_service = ImageGenerationService()
+        markdown_storage = MarkdownStorage()
+        notion_storage = NotionStorage()
+        pipeline = KnowledgeBotPipeline()
+        logger.debug("Services initialized lazily")
+    
+    return (railway_client, gemini_service, claude_service, image_service,
+            markdown_storage, notion_storage, pipeline)
 
 # User sessions to track processing state
 user_sessions: Dict[int, Dict[str, Any]] = {}
@@ -99,6 +118,10 @@ async def process_video_url(message: Message) -> None:
     url = message.text.strip()
     user_id = message.from_user.id
     
+    # Initialize services
+    (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+     markdown_storage_inst, notion_storage_inst, pipeline_inst) = get_services()
+    
     # Validate URL
     platform = is_supported_video_url(url)
     if not platform:
@@ -111,12 +134,12 @@ async def process_video_url(message: Message) -> None:
         status_msg = await message.answer(PROGRESS_MESSAGES["downloading"])
         
         # Download via Railway
-        video_path = await railway_client.download_video(url)
+        video_path = await railway_client_inst.download_video(url)
         logger.info(f"Video downloaded successfully: {video_path}")
         
         # Step 2: Enhanced Gemini analysis with web research
         await status_msg.edit_text(PROGRESS_MESSAGES["analyzing"])
-        analysis = await gemini_service.analyze_video_with_research(
+        analysis = await gemini_service_inst.analyze_video_with_research(
             video_path=video_path,
             video_url=url,
             platform=platform
@@ -230,6 +253,10 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
     analysis_id = callback.data.replace("approve_", "")
     user_id = callback.from_user.id
     
+    # Initialize services
+    (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+     markdown_storage_inst, notion_storage_inst, pipeline_inst) = get_services()
+    
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
         return
@@ -244,12 +271,12 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         await callback.message.edit_text(PROGRESS_MESSAGES["enriching"])
         
         # Step 4: Claude content enrichment
-        enriched_content = await claude_service.enrich_content(session['analysis'])
+        enriched_content = await claude_service_inst.enrich_content(session['analysis'])
         
         # Step 5: Generate diagrams if enabled
         if Config.ENABLE_IMAGE_GENERATION:
             await callback.message.edit_text(PROGRESS_MESSAGES["generating_diagrams"])
-            enriched_content = await image_service.generate_textbook_diagrams(enriched_content)
+            enriched_content = await image_service_inst.generate_textbook_diagrams(enriched_content)
         
         # Step 6: Save to storage
         await callback.message.edit_text(PROGRESS_MESSAGES["saving"])
@@ -260,7 +287,7 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         
         try:
             if Config.USE_NOTION_STORAGE and Config.NOTION_API_KEY:
-                notion_url = await notion_storage.save_entry(
+                notion_url = await notion_storage_inst.save_entry(
                     session['analysis'], 
                     enriched_content,
                     session['video_url']
@@ -272,7 +299,7 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         
         # Fallback to Markdown storage
         if not storage_success:
-            file_path = await markdown_storage.save_entry(
+            file_path = await markdown_storage_inst.save_entry(
                 session['analysis'],
                 enriched_content,
                 session['video_url']
@@ -336,6 +363,10 @@ async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
     analysis_id = callback.data.replace("reanalyze_", "")
     user_id = callback.from_user.id
     
+    # Initialize services
+    (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+     markdown_storage_inst, notion_storage_inst, pipeline_inst) = get_services()
+    
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
         return
@@ -346,7 +377,7 @@ async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
         await callback.message.edit_text("🔄 Re-analyzing with enhanced focus...")
         
         # Re-run analysis with different parameters
-        analysis = await gemini_service.analyze_video_with_research(
+        analysis = await gemini_service_inst.analyze_video_with_research(
             video_path=None,  # Use cached if available
             video_url=session['video_url'],
             platform=session['platform'],

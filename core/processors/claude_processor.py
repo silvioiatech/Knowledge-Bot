@@ -29,7 +29,7 @@ class EnhancedClaudeProcessor:
         self.http_client = httpx.AsyncClient(
             timeout=60.0,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {Config.OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/silvioiatech/knowledge-bot",
                 "X-Title": "Knowledge Bot"
