@@ -1,7 +1,7 @@
 """Bot middleware for rate limiting and logging."""
 
 import time
-from typing import Dict, Any, Awaitable, Callable
+from typing import Dict, Any, Awaitable, Callable, Union
 
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery
@@ -18,7 +18,7 @@ class RateLimitMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
-        event: Message | CallbackQuery,
+        event: Union[Message, CallbackQuery],
         data: Dict[str, Any]
     ) -> Any:
         user_id = event.from_user.id
@@ -46,7 +46,7 @@ class LoggingMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
-        event: Message | CallbackQuery,
+        event: Union[Message, CallbackQuery],
         data: Dict[str, Any]
     ) -> Any:
         user_id = event.from_user.id
