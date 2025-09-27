@@ -1,64 +1,72 @@
-"""Middleware for Knowledge Bot."""
+"""Bot middleware for rate limiting and logging."""
 
 import time
-from collections import defaultdict
-from typing import Dict, Any, Callable, Awaitable
+from typing import Dict, Any, Awaitable, Callable
 
-try:
-    from aiogram import BaseMiddleware
-    from aiogram.types import TelegramObject, Message
-except ImportError:
-    BaseMiddleware = object
-    TelegramObject = Message = None
-
-from config import Config, ERROR_MESSAGES
+from aiogram import BaseMiddleware
+from aiogram.types import Message, CallbackQuery
+from loguru import logger
 
 
 class RateLimitMiddleware(BaseMiddleware):
     """Rate limiting middleware to prevent spam."""
     
-    def __init__(self):
-        super().__init__()
-        # Store user request timestamps
-        self.user_requests: Dict[int, list] = defaultdict(list)
-        self.max_requests = Config.RATE_LIMIT_PER_HOUR
-        self.window_seconds = 3600  # 1 hour
+    def __init__(self, rate_limit: int = 60):  # 1 minute cooldown
+        self.rate_limit = rate_limit
+        self.user_last_request: Dict[int, float] = {}
     
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-        event: TelegramObject,
+        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        event: Message | CallbackQuery,
         data: Dict[str, Any]
     ) -> Any:
-        """Process middleware."""
-        if not isinstance(event, Message):
-            return await handler(event, data)
-        
-        user_id = event.from_user.id if event.from_user else 0
+        user_id = event.from_user.id
         current_time = time.time()
         
-        # Clean old requests
-        self._cleanup_old_requests(user_id, current_time)
+        # Check rate limit for video processing requests
+        if isinstance(event, Message) and event.text and ("http" in event.text):
+            last_request = self.user_last_request.get(user_id, 0)
+            
+            if current_time - last_request < self.rate_limit:
+                remaining = int(self.rate_limit - (current_time - last_request))
+                await event.answer(
+                    f"⏰ Rate limit: Please wait {remaining} seconds before sending another video."
+                )
+                return
+            
+            self.user_last_request[user_id] = current_time
         
-        # Check if user is within rate limit
-        if self._is_rate_limited(user_id):
-            await event.answer(ERROR_MESSAGES["rate_limit"])
-            return
-        
-        # Add current request
-        self.user_requests[user_id].append(current_time)
-        
-        # Continue to handler
         return await handler(event, data)
+
+
+class LoggingMiddleware(BaseMiddleware):
+    """Enhanced logging middleware."""
     
-    def _cleanup_old_requests(self, user_id: int, current_time: float):
-        """Remove requests older than the time window."""
-        cutoff_time = current_time - self.window_seconds
-        self.user_requests[user_id] = [
-            req_time for req_time in self.user_requests[user_id]
-            if req_time > cutoff_time
-        ]
-    
-    def _is_rate_limited(self, user_id: int) -> bool:
-        """Check if user has exceeded rate limit."""
-        return len(self.user_requests[user_id]) >= self.max_requests
+    async def __call__(
+        self,
+        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        event: Message | CallbackQuery,
+        data: Dict[str, Any]
+    ) -> Any:
+        user_id = event.from_user.id
+        username = event.from_user.username or "unknown"
+        
+        if isinstance(event, Message):
+            text_preview = (event.text[:50] + "...") if event.text and len(event.text) > 50 else event.text
+            logger.info(f"Message from user {user_id} (@{username}): {text_preview}")
+        elif isinstance(event, CallbackQuery):
+            logger.info(f"Callback from user {user_id} (@{username}): {event.data}")
+        
+        try:
+            result = await handler(event, data)
+            return result
+        except Exception as e:
+            logger.error(f"Handler error for user {user_id}: {e}")
+            
+            if isinstance(event, Message):
+                await event.answer("❌ An error occurred. Please try again later.")
+            elif isinstance(event, CallbackQuery):
+                await event.answer("❌ An error occurred. Please try again.")
+            
+            raise

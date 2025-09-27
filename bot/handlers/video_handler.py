@@ -1,304 +1,381 @@
-"""Video URL handler for Telegram bot."""
+"""Video processing handlers with web research and confirmation preview."""
 
+import asyncio
 import re
 from typing import Dict, Any
+from urllib.parse import urlparse
 
-try:
-    from aiogram import Router, F
-    from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-    from aiogram.filters import StateFilter
-    from aiogram.fsm.context import FSMContext
-    from aiogram.fsm.state import State, StatesGroup
-    from loguru import logger
-except ImportError:
-    Router = F = Message = CallbackQuery = InlineKeyboardMarkup = None
-    InlineKeyboardButton = StateFilter = FSMContext = State = StatesGroup = None
-    logger = None
+from aiogram import Router, F
+from aiogram.types import (
+    Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+)
+from aiogram.filters import Command
+from loguru import logger
 
+from services.railway_client import RailwayClient
+from services.gemini_service import EnhancedGeminiService
+from services.claude_service import ClaudeService
+from services.image_generation_service import ImageGenerationService
+from storage.markdown_storage import MarkdownStorage
+from storage.notion_storage import NotionStorage
 from config import Config, ERROR_MESSAGES, PROGRESS_MESSAGES, SUPPORTED_PLATFORMS
-from services.railway_client import download_video_from_url, RailwayDownloadError, RailwayClient
-from services.gemini_service import analyze_video_content, GeminiAnalysisError
-from services.claude_service import enrich_analysis, ClaudeEnrichmentError
-from services.image_generation_service import generate_content_diagrams, DiagramGenerationError
-from storage.markdown_storage import save_knowledge_entry, MarkdownStorageError
-from storage.notion_storage import save_knowledge_entry_to_notion
+from core.pipeline import KnowledgeBotPipeline
+
+# Router for video handlers
+router = Router()
+
+# Service instances
+railway_client = RailwayClient()
+gemini_service = EnhancedGeminiService()
+claude_service = ClaudeService()
+image_service = ImageGenerationService()
+markdown_storage = MarkdownStorage()
+notion_storage = NotionStorage()
+pipeline = KnowledgeBotPipeline()
+
+# User sessions to track processing state
+user_sessions: Dict[int, Dict[str, Any]] = {}
 
 
-class VideoStates(StatesGroup):
-    """FSM states for video processing."""
-    waiting_for_approval = State()
+def is_supported_video_url(url: str) -> str:
+    """Check if URL is from supported platforms."""
+    for platform, patterns in SUPPORTED_PLATFORMS.items():
+        for pattern in patterns:
+            if re.search(pattern, url, re.IGNORECASE):
+                return platform
+    return ""
 
 
-def register_video_handlers(dp):
-    """Register all video-related handlers."""
-    if not Router:
+def create_preview_keyboard(analysis_id: str) -> InlineKeyboardMarkup:
+    """Create keyboard for video analysis preview."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Add to Knowledge Base",
+                    callback_data=f"approve_{analysis_id}"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Reject",
+                    callback_data=f"reject_{analysis_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔄 Re-analyze with Different Focus",
+                    callback_data=f"reanalyze_{analysis_id}"
+                )
+            ]
+        ]
+    )
+
+
+@router.message(Command("start"))
+async def cmd_start(message: Message) -> None:
+    """Handle /start command."""
+    welcome_text = """
+🤖 **Knowledge Bot Enhanced**
+
+I can analyze TikTok and Instagram videos to create comprehensive educational content for your knowledge base.
+
+**What I do:**
+1. 📥 **Download** your video
+2. 🧠 **Analyze** with AI + web research  
+3. 📋 **Preview** technical summary for your approval
+4. ✨ **Generate** comprehensive educational content
+5. 🖼️ **Create** technical diagrams (optional)
+6. 💾 **Save** to your knowledge base
+
+Just send me a TikTok or Instagram video URL to get started!
+
+**Supported platforms:** TikTok, Instagram Reels
+"""
+    await message.answer(welcome_text)
+
+
+@router.message(F.text.regexp(r'https?://[^\s]+'))
+async def process_video_url(message: Message) -> None:
+    """Process video URLs with enhanced analysis and preview."""
+    url = message.text.strip()
+    user_id = message.from_user.id
+    
+    # Validate URL
+    platform = is_supported_video_url(url)
+    if not platform:
+        await message.answer(ERROR_MESSAGES["invalid_url"])
         return
-    
-    router = Router()
-    
-    # URL detection handler
-    @router.message(F.text.regexp(r'https?://(?:www\.)?(?:tiktok\.com|vm\.tiktok\.com|instagram\.com/(?:p|reel))'))
-    async def handle_video_url(message: Message, state: FSMContext):
-        """Handle video URL messages."""
-        url = message.text.strip()
-        
-        # Validate URL format
-        valid_url = False
-        for platform, pattern in SUPPORTED_PLATFORMS.items():
-            if re.match(pattern, url):
-                valid_url = True
-                break
-        
-        if not valid_url:
-            await message.answer(ERROR_MESSAGES["invalid_url"])
-            return
-        
-        # Process the video
-        await process_video_url(message, state, url)
-    
-    # Callback handlers
-    @router.callback_query(F.data.in_(["approve", "reject", "reanalyze"]))
-    async def handle_callbacks(callback: CallbackQuery, state: FSMContext):
-        """Handle inline button callbacks."""
-        await handle_approval_callback(callback, state)
-    
-    # Register router with dispatcher
-    dp.include_router(router)
-    
-    if logger:
-        logger.info("Video handlers registered")
-
-
-async def process_video_url(message: Message, state: FSMContext, url: str):
-    """Process video URL through the complete pipeline."""
-    if not message:
-        return
-    
-    user_id = message.from_user.id if message.from_user else 0
     
     try:
         # Step 1: Download video
+        logger.info(f"Starting video processing for user {user_id}: {url}")
         status_msg = await message.answer(PROGRESS_MESSAGES["downloading"])
         
-        try:
-            download_info, video_path = await download_video_from_url(url)
-        except RailwayDownloadError as e:
-            await status_msg.edit_text(ERROR_MESSAGES["download_failed"])
-            if logger:
-                logger.error(f"Download failed for user {user_id}: {e}")
-            return
+        # Download via Railway
+        video_path = await railway_client.download_video(url)
+        logger.info(f"Video downloaded successfully: {video_path}")
         
-        # Step 2: Analyze with Gemini
+        # Step 2: Enhanced Gemini analysis with web research
         await status_msg.edit_text(PROGRESS_MESSAGES["analyzing"])
+        analysis = await gemini_service.analyze_video_with_research(
+            video_path=video_path,
+            video_url=url,
+            platform=platform
+        )
         
-        try:
-            analysis = await analyze_video_content(video_path)
-            analysis["original_url"] = url
-            analysis["download_info"] = download_info
-        except GeminiAnalysisError as e:
-            await status_msg.edit_text(ERROR_MESSAGES["analysis_failed"])
-            if logger:
-                logger.error(f"Analysis failed for user {user_id}: {e}")
-            return
-        finally:
-            # Cleanup temp file
-            try:
-                client = RailwayClient()
-                await client.cleanup_temp_file(video_path)
-            except Exception as e:
-                if logger:
-                    logger.warning(f"Failed to cleanup temp file {video_path}: {e}")
+        logger.info(f"Video analysis completed for user {user_id}")
         
-        # Step 3: Show analysis for approval
-        analysis_text = format_analysis_message(analysis)
-        keyboard = create_approval_keyboard(analysis)
+        # Step 3: Generate technical preview
+        await status_msg.edit_text("🔍 Generating technical preview...")
+        preview = await _generate_technical_preview(analysis, url)
         
-        await status_msg.edit_text(analysis_text, reply_markup=keyboard)
+        # Store analysis in user session
+        analysis_id = f"{user_id}_{hash(url) % 10000}"
+        user_sessions[user_id] = {
+            'analysis_id': analysis_id,
+            'analysis': analysis,
+            'video_url': url,
+            'platform': platform,
+            'preview': preview
+        }
         
-        # Set state and store analysis data
-        await state.set_state(VideoStates.waiting_for_approval)
-        await state.update_data(analysis=analysis, message_id=status_msg.message_id)
+        # Step 4: Send technical preview with confirmation buttons
+        keyboard = create_preview_keyboard(analysis_id)
+        await status_msg.edit_text(
+            text=preview,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
         
-        if logger:
-            logger.info(f"Video analysis completed for user {user_id}")
-    
     except Exception as e:
-        await message.answer(ERROR_MESSAGES["general_error"])
-        if logger:
-            logger.error(f"Unexpected error processing video for user {user_id}: {e}")
+        logger.error(f"Analysis failed for user {user_id}: {e}")
+        await status_msg.edit_text(ERROR_MESSAGES["analysis_failed"])
 
 
-def format_analysis_message(analysis: Dict[str, Any]) -> str:
-    """Format Gemini analysis as readable Telegram message."""
-    title = analysis.get("title", "Untitled Video")
-    subject = analysis.get("subject", "Unknown")
-    summary = analysis.get("summary", "No summary available")
-    key_points = analysis.get("key_points", [])
-    tools = analysis.get("tools", [])
-    difficulty = analysis.get("difficulty_level", "unknown")
+async def _generate_technical_preview(analysis, video_url: str) -> str:
+    """Generate a comprehensive technical preview of the video analysis."""
     
-    message = f"""
-🎥 <b>{title}</b>
+    # Extract key information from analysis
+    title = analysis.video_metadata.title or "Untitled Video"
+    author = analysis.video_metadata.author or "Unknown"
+    duration = analysis.video_metadata.duration or 0
+    
+    # Main topic and category
+    main_topic = analysis.content_outline.main_topic
+    category = analysis.content_outline.category
+    difficulty = analysis.content_outline.difficulty_level
+    
+    # Key concepts and tools
+    key_concepts = [entity.name for entity in analysis.entities if entity.type in ['concept', 'technology']][:6]
+    tools_mentioned = [entity.name for entity in analysis.entities if entity.type == 'technology'][:5]
+    
+    # Research findings
+    research_topics = analysis.research_queries if hasattr(analysis, 'research_queries') else []
+    web_sources = len(analysis.fact_checks) if hasattr(analysis, 'fact_checks') else 0
+    
+    # Quality metrics
+    confidence = analysis.quality_scores.overall
+    completeness = analysis.quality_scores.content_completeness
+    technical_depth = analysis.quality_scores.technical_depth
+    
+    # Estimated output
+    estimated_words = 2000 + (len(analysis.entities) * 30)
+    estimated_sections = len(analysis.content_outline.key_points) + 3
+    
+    preview = f"""
+🎥 <b>Technical Analysis Preview</b>
 
-📂 <b>Category:</b> {subject}
-⏱️ <b>Difficulty:</b> {difficulty}
+📹 <b>Video Details:</b>
+• Title: {title[:60]}{'...' if len(title) > 60 else ''}
+• Author: {author}
+• Duration: {duration:.1f}s | Platform: {video_url.split('/')[2].split('.')[0].upper()}
 
-📝 <b>Summary:</b>
-{summary}
+🎯 <b>Content Analysis:</b>
+• <b>Main Topic:</b> {main_topic}
+• <b>Category:</b> {category}
+• <b>Difficulty:</b> {difficulty.title()}
+• <b>Confidence:</b> {confidence:.0%}
 
-🔑 <b>Key Points:</b>
+🔍 <b>Web Research Conducted:</b>
+• Research queries: {len(research_topics)}
+• Web sources verified: {web_sources}
+• Fact-checking: {'✅' if web_sources > 0 else '⚠️'}
+
+🧠 <b>Key Technical Concepts:</b>
+{chr(10).join([f"• {concept}" for concept in key_concepts[:4]])}
+{f"... and {len(key_concepts)-4} more" if len(key_concepts) > 4 else ""}
+
+🛠️ <b>Tools/Technologies:</b>
+{chr(10).join([f"• {tool}" for tool in tools_mentioned[:3]]) if tools_mentioned else "• No specific tools mentioned"}
+
+📊 <b>Quality Metrics:</b>
+• Content Completeness: {completeness:.0%}
+• Technical Depth: {technical_depth:.0%}
+• Overall Quality: {confidence:.0%}
+
+📝 <b>Estimated Output:</b>
+• ~{estimated_words:,} words of educational content
+• ~{estimated_sections} detailed sections
+• Technical diagrams: {"Yes" if Config.ENABLE_IMAGE_GENERATION else "No"}
+• Knowledge base storage: {"Notion + Markdown" if Config.USE_NOTION_STORAGE else "Markdown"}
+
+<b>Proceed with full content generation?</b>
 """
     
-    for i, point in enumerate(key_points[:5], 1):  # Limit to 5 points
-        message += f"{i}. {point}\\n"
+    return preview.strip()
+
+
+@router.callback_query(F.data.startswith("approve_"))
+async def handle_approval_callback(callback: CallbackQuery) -> None:
+    """Handle approval of video analysis."""
+    analysis_id = callback.data.replace("approve_", "")
+    user_id = callback.from_user.id
     
-    if tools:
-        message += f"\\n🛠️ <b>Tools mentioned:</b> {', '.join(tools[:5])}"
-    
-    message += "\\n\\n👆 <b>Approve this analysis to add to your knowledge base?</b>"
-    
-    return message
-
-
-def create_approval_keyboard(analysis_data: Dict[str, Any]) -> InlineKeyboardMarkup:
-    """Create inline keyboard for analysis approval."""
-    if not InlineKeyboardMarkup:
-        return None
-        
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Add to Knowledge Base", callback_data="approve"),
-            InlineKeyboardButton(text="❌ Reject", callback_data="reject")
-        ],
-        [
-            InlineKeyboardButton(text="🔄 Re-analyze", callback_data="reanalyze")
-        ]
-    ])
-    return keyboard
-
-
-async def handle_approval_callback(callback: CallbackQuery, state: FSMContext):
-    """Handle approval/rejection callbacks."""
-    if not callback.data:
+    if user_id not in user_sessions:
+        await callback.answer("❌ Session expired. Please submit the video URL again.")
         return
     
-    # Answer callback immediately to prevent timeout
-    await callback.answer()
-    
-    user_id = callback.from_user.id if callback.from_user else 0
-    data = await state.get_data()
-    analysis = data.get("analysis")
-    
-    if not analysis:
-        await callback.message.edit_text("❌ Analysis data not found")
+    session = user_sessions[user_id]
+    if session['analysis_id'] != analysis_id:
+        await callback.answer("❌ Invalid session. Please try again.")
         return
     
     try:
-        if callback.data == "approve":
-            # Enrich and save content
-            await callback.message.edit_text(PROGRESS_MESSAGES["enriching"])
-            
-            try:
-                enriched_content = await enrich_analysis(analysis)
-            except ClaudeEnrichmentError as e:
-                await callback.message.edit_text(ERROR_MESSAGES["enrichment_failed"])
-                if logger:
-                    logger.error(f"Enrichment failed for user {user_id}: {e}")
-                return
-            
-            # Generate technical diagrams for textbook content
-            diagrams = []
-            if Config.ENABLE_IMAGE_GENERATION:
-                try:
-                    await callback.message.edit_text(PROGRESS_MESSAGES["generating_diagrams"])
-                    enriched_content, diagrams = await generate_content_diagrams(enriched_content, analysis)
-                    
-                    if diagrams and logger:
-                        logger.info(f"Generated {len(diagrams)} technical diagrams")
-                        
-                except DiagramGenerationError as e:
-                    if logger:
-                        logger.warning(f"Diagram generation failed: {e}")
-            
-            # Save to knowledge base
-            await callback.message.edit_text(PROGRESS_MESSAGES["saving"])
-            
-            try:
-                # Try Notion storage first if enabled
-                if Config.USE_NOTION_STORAGE and Config.NOTION_API_KEY:
-                    try:
-                        notion_url = await save_knowledge_entry_to_notion(enriched_content, analysis)
-                        title = analysis.get('title', 'Unknown Title')
-                        diagram_info = f"\\n🎨 **Diagrams:** {len(diagrams)} technical diagrams generated" if diagrams else ""
-                        
-                        success_msg = f"""✅ **Comprehensive Technical Guide Created!**
-
-📝 **Title:** {title}
-🔗 **Notion Page:** [View Entry]({notion_url}){diagram_info}
-📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} detailed content
-
-📚 Your professional reference guide is ready!"""
-                        
-                        await callback.message.edit_text(success_msg, parse_mode='Markdown')
-                        
-                    except Exception as notion_error:
-                        if logger:
-                            logger.error(f"Notion storage failed: {notion_error}, falling back to local storage")
-                        # Fallback to local storage
-                        file_path = await save_knowledge_entry(enriched_content, analysis)
-                        title = analysis.get('title', 'Unknown Title')
-                        diagram_info = f"\\n🎨 **Diagrams:** {len(diagrams)} technical diagrams generated" if diagrams else ""
-                        
-                        success_msg = f"""✅ **Comprehensive Technical Guide Created!**
-
-📝 **Title:** {title}
-📁 **Saved to:** Local Markdown file{diagram_info}
-📊 **Words:** ~{Config.TARGET_CONTENT_LENGTH} detailed content
-
-⚠️ *Note: Notion sync failed, saved locally instead*
-📚 Your professional reference guide is ready!"""
-                        
-                        await callback.message.edit_text(success_msg, parse_mode='Markdown')
-                else:
-                    # Use local storage
-                    file_path = await save_knowledge_entry(enriched_content, analysis)
-                    success_msg = f"{PROGRESS_MESSAGES['completed']}\\n\\n📁 Saved to: <code>{file_path}</code>"
-                    await callback.message.edit_text(success_msg)
-                
-            except MarkdownStorageError as e:
-                await callback.message.edit_text(ERROR_MESSAGES["storage_failed"])
-                if logger:
-                    logger.error(f"Storage failed for user {user_id}: {e}")
-                return
+        # Update message to show processing
+        await callback.message.edit_text(PROGRESS_MESSAGES["enriching"])
         
-        elif callback.data == "reject":
-            await callback.message.edit_text("❌ Analysis rejected. Send another video URL to try again.")
+        # Step 4: Claude content enrichment
+        enriched_content = await claude_service.enrich_content(session['analysis'])
         
-        elif callback.data == "reanalyze":
-            # Re-process the same URL
-            original_url = analysis.get("original_url")
-            if original_url:
-                await callback.message.edit_text("🔄 Re-analyzing video...")
-                # Create a mock message object for re-processing
-                class MockMessage:
-                    def __init__(self, chat_id, user_id):
-                        self.chat = type('obj', (object,), {'id': chat_id})()
-                        self.from_user = type('obj', (object,), {'id': user_id})()
-                    
-                    async def answer(self, text, **kwargs):
-                        return await callback.message.edit_text(text, **kwargs)
-                
-                mock_msg = MockMessage(callback.message.chat.id, user_id)
-                await process_video_url(mock_msg, state, original_url)
-            else:
-                await callback.message.edit_text("❌ Cannot re-analyze: original URL not found")
-    
+        # Step 5: Generate diagrams if enabled
+        if Config.ENABLE_IMAGE_GENERATION:
+            await callback.message.edit_text(PROGRESS_MESSAGES["generating_diagrams"])
+            enriched_content = await image_service.generate_textbook_diagrams(enriched_content)
+        
+        # Step 6: Save to storage
+        await callback.message.edit_text(PROGRESS_MESSAGES["saving"])
+        
+        # Try Notion first, fallback to Markdown
+        storage_success = False
+        storage_location = ""
+        
+        try:
+            if Config.USE_NOTION_STORAGE and Config.NOTION_API_KEY:
+                notion_url = await notion_storage.save_entry(
+                    session['analysis'], 
+                    enriched_content,
+                    session['video_url']
+                )
+                storage_location = f"📋 <a href='{notion_url}'>Notion Database</a>"
+                storage_success = True
+        except Exception as notion_error:
+            logger.error(f"Notion storage failed: {notion_error}, falling back to local storage")
+        
+        # Fallback to Markdown storage
+        if not storage_success:
+            file_path = await markdown_storage.save_entry(
+                session['analysis'],
+                enriched_content,
+                session['video_url']
+            )
+            storage_location = f"📁 <code>{file_path}</code>"
+        
+        # Success message
+        success_message = f"""
+✅ <b>Knowledge Entry Created Successfully!</b>
+
+📊 <b>Final Metrics:</b>
+• Words Generated: ~{len(enriched_content.split()) if isinstance(enriched_content, str) else 'N/A'}
+• Processing Time: Complete
+• Storage: {storage_location}
+
+🎯 <b>Content Includes:</b>
+• Comprehensive analysis from Gemini
+• Educational content from Claude  
+• Web research validation
+• Technical concepts breakdown
+{'• AI-generated diagrams' if Config.ENABLE_IMAGE_GENERATION else ''}
+
+The knowledge has been added to your database!
+        """
+        
+        await callback.message.edit_text(
+            success_message,
+            parse_mode="HTML",
+            disable_web_page_preview=True
+        )
+        
+        # Clear user session
+        del user_sessions[user_id]
+        
     except Exception as e:
-        await callback.message.edit_text(ERROR_MESSAGES["general_error"])
-        if logger:
-            logger.error(f"Callback handling error for user {user_id}: {e}")
+        logger.error(f"Processing failed for user {user_id}: {e}")
+        await callback.message.edit_text("❌ Processing failed. Please try again.")
     
-    finally:
-        # Clear state
-        await state.clear()
-        # Callback already answered at the beginning
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("reject_"))
+async def handle_rejection_callback(callback: CallbackQuery) -> None:
+    """Handle rejection of video analysis."""
+    user_id = callback.from_user.id
+    
+    # Clear user session
+    if user_id in user_sessions:
+        del user_sessions[user_id]
+    
+    await callback.message.edit_text(
+        "❌ Analysis rejected. Send me another video URL when you're ready!",
+        reply_markup=None
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("reanalyze_"))
+async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
+    """Handle request to re-analyze with different focus."""
+    analysis_id = callback.data.replace("reanalyze_", "")
+    user_id = callback.from_user.id
+    
+    if user_id not in user_sessions:
+        await callback.answer("❌ Session expired. Please submit the video URL again.")
+        return
+    
+    session = user_sessions[user_id]
+    
+    try:
+        await callback.message.edit_text("🔄 Re-analyzing with enhanced focus...")
+        
+        # Re-run analysis with different parameters
+        analysis = await gemini_service.analyze_video_with_research(
+            video_path=None,  # Use cached if available
+            video_url=session['video_url'],
+            platform=session['platform'],
+            enhanced_focus=True  # Different analysis approach
+        )
+        
+        # Generate new preview
+        preview = await _generate_technical_preview(analysis, session['video_url'])
+        
+        # Update session
+        session['analysis'] = analysis
+        session['preview'] = preview
+        
+        # Send updated preview
+        keyboard = create_preview_keyboard(analysis_id)
+        await callback.message.edit_text(
+            text=preview,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Re-analysis failed for user {user_id}: {e}")
+        await callback.message.edit_text("❌ Re-analysis failed. Please try with a new video.")
+    
+    await callback.answer()
+
+
+def register_video_handlers(dp) -> None:
+    """Register all video handlers."""
+    dp.include_router(router)
+    logger.info("Video handlers registered")

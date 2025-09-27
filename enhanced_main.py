@@ -1,7 +1,7 @@
-"""Enhanced Knowledge Bot main application using the 6-stage AI pipeline."""
+"""Enhanced Knowledge Bot main entry point."""
 
 import asyncio
-import sys
+import logging
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
@@ -9,250 +9,166 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from loguru import logger
 
-# Add project root to path
-sys.path.append(str(Path(__file__).parent))
-
-from config import Config, TELEGRAM_BOT_TOKEN
-from core.pipeline import KnowledgeBotPipeline
-from interfaces.telegram.enhanced_interface import EnhancedTelegramInterface
-from utils.helpers import ensure_directory
+from bot.handlers.video_handler import register_video_handlers
+from bot.middleware import RateLimitMiddleware, LoggingMiddleware
+from config import Config
 
 
-class EnhancedKnowledgeBot:
-    """Enhanced Knowledge Bot with 6-stage AI pipeline."""
+class KnowledgeBotApp:
+    """Main Knowledge Bot application."""
     
     def __init__(self):
-        # Validate configuration
-        Config.validate()
+        self.bot = None
+        self.dp = None
         
-        # Initialize core components
-        self.pipeline = KnowledgeBotPipeline()
-        self.telegram_interface = EnhancedTelegramInterface()
-        
-        # Initialize bot and dispatcher
-        self.bot = Bot(
-            token=TELEGRAM_BOT_TOKEN,
-            default=DefaultBotProperties(
-                parse_mode=ParseMode.MARKDOWN
-            )
-        )
-        self.dispatcher = Dispatcher()
-        
-        # Set up logging
-        self._setup_logging()
-        
-        # Register handlers
-        self._setup_handlers()
-        
-        # Ensure directories exist
-        self._setup_directories()
-    
-    def _setup_logging(self):
-        """Configure logging with appropriate levels and formats."""
-        
-        # Remove default logger
+    async def _setup_logging(self):
+        """Configure enhanced logging."""
+        # Configure loguru
         logger.remove()
-        
-        # Console logging
         logger.add(
-            sys.stdout,
-            level="INFO",
-            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-            colorize=True
-        )
-        
-        # File logging
-        ensure_directory("logs")
-        logger.add(
-            "logs/knowledge_bot_{time:YYYY-MM-DD}.log",
+            "logs/bot_{time}.log",
             rotation="1 day",
-            retention="7 days",
-            level="DEBUG",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            compression="zip"
+            retention="7 days", 
+            format="{time} | {level} | {module}:{function}:{line} - {message}",
+            level="DEBUG"
         )
         
-        # Error file logging
-        logger.add(
-            "logs/errors_{time:YYYY-MM-DD}.log",
-            rotation="1 day",
-            retention="30 days",
-            level="ERROR",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            compression="zip"
-        )
+        # Suppress aiogram INFO logs
+        logging.getLogger("aiogram").setLevel(logging.WARNING)
+        logger.info("Knowledge Bot logging initialized")
         
-        logger.info("Enhanced Knowledge Bot logging initialized")
+    async def _setup_middleware(self):
+        """Setup bot middleware."""
+        self.dp.message.middleware(RateLimitMiddleware())
+        self.dp.callback_query.middleware(RateLimitMiddleware())
+        self.dp.message.middleware(LoggingMiddleware())
+        self.dp.callback_query.middleware(LoggingMiddleware())
+        logger.info("Middleware registered")
     
-    def _setup_handlers(self):
-        """Set up Telegram message handlers."""
-        
-        # Get router from interface
-        router = self.telegram_interface.get_router()
-        
-        # Include the router in dispatcher
-        self.dispatcher.include_router(router)
-        
-        # Add middleware for the pipeline
-        self._add_pipeline_middleware()
-        
-        logger.info("Telegram handlers configured")
+    async def _register_handlers(self):
+        """Register all bot handlers."""
+        register_video_handlers(self.dp)
+        logger.info("Bot handlers registered")
     
-    def _add_pipeline_middleware(self):
-        """Add middleware to inject pipeline into handlers."""
-        
-        @self.dispatcher.message.outer_middleware()
-        async def pipeline_middleware(handler, event, data):
-            """Inject pipeline into handler data."""
-            data['pipeline'] = self.pipeline
-            return await handler(event, data)
-        
-        @self.dispatcher.callback_query.outer_middleware() 
-        async def callback_pipeline_middleware(handler, event, data):
-            """Inject pipeline into callback handler data."""
-            data['pipeline'] = self.pipeline
-            return await handler(event, data)
-    
-    def _setup_directories(self):
-        """Ensure required directories exist."""
-        
-        directories = [
-            Config.TEMP_DIR,
-            Config.KNOWLEDGE_BASE_PATH,
-            "logs"
-        ]
-        
-        for directory in directories:
-            ensure_directory(directory)
-            logger.debug(f"Ensured directory exists: {directory}")
-    
-    async def start_polling(self):
-        """Start the bot with polling."""
-        
-        logger.info("Starting Enhanced Knowledge Bot...")
-        
-        try:
-            # Set bot commands
-            await self._set_bot_commands()
-            
-            # Start cleanup task
-            cleanup_task = asyncio.create_task(self._periodic_cleanup())
-            
-            # Start health check task
-            health_task = asyncio.create_task(self._periodic_health_check())
-            
-            # Start polling
-            logger.info("🚀 Enhanced Knowledge Bot is running!")
-            logger.info("Ready to process educational videos with 6-stage AI pipeline:")
-            logger.info("1. 🧠 Gemini Analysis + Web Research")
-            logger.info("2. 📱 Telegram User Approval")
-            logger.info("3. ✍️  Claude Textbook Generation")
-            logger.info("4. 🎨 Banana Image Generation")
-            logger.info("5. 🔧 GPT Assembly & QA")
-            logger.info("6. 📊 Notion Database Storage")
-            
-            await self.dispatcher.start_polling(self.bot)
-            
-        except Exception as e:
-            logger.error(f"Bot startup failed: {e}")
-            raise
-        finally:
-            # Cleanup tasks
-            if 'cleanup_task' in locals():
-                cleanup_task.cancel()
-            if 'health_task' in locals():
-                health_task.cancel()
-            
-            # Close pipeline
-            await self.pipeline.close()
-    
-    async def _set_bot_commands(self):
-        """Set bot commands menu."""
-        
+    async def _setup_commands(self):
+        """Setup bot commands menu."""
         from aiogram.types import BotCommand
         
         commands = [
-            BotCommand(command="start", description="🚀 Start the bot and see features"),
-            BotCommand(command="help", description="❓ Get help and usage instructions"),
-            BotCommand(command="stats", description="📊 View your processing statistics"),
+            BotCommand(command="start", description="🚀 Start the Knowledge Bot"),
         ]
         
         await self.bot.set_my_commands(commands)
-        logger.info("Bot commands configured")
+        logger.info("Bot commands menu configured")
     
-    async def _periodic_cleanup(self):
-        """Periodic cleanup of temporary files."""
+    async def _create_directories(self):
+        """Create necessary directories."""
+        directories = [
+            Config.TEMP_DIR,
+            Config.KNOWLEDGE_BASE_PATH,
+            Path("logs"),
+        ]
         
-        while True:
-            try:
-                await asyncio.sleep(3600)  # Run every hour
-                await self.pipeline.cleanup_temp_files()
-                logger.debug("Periodic cleanup completed")
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Cleanup task failed: {e}")
+        for directory in directories:
+            Path(directory).mkdir(parents=True, exist_ok=True)
+            logger.debug(f"Directory ensured: {directory}")
     
-    async def _periodic_health_check(self):
-        """Periodic health check of system components."""
+    async def _startup_message(self):
+        """Send startup notification."""
+        startup_text = """
+🤖 **Knowledge Bot Enhanced - Online!**
+
+🔧 **Capabilities Active:**
+• Video Analysis with Web Research
+• Technical Preview Generation  
+• Multi-AI Content Pipeline (Gemini → Claude → GPT)
+• Advanced Quality Metrics
+• Notion + Markdown Storage
+• Interactive Approval Workflow
+
+Ready to process educational content!
+        """
         
-        while True:
+        # Send to admin if configured
+        if hasattr(Config, 'ADMIN_CHAT_ID') and Config.ADMIN_CHAT_ID:
             try:
-                await asyncio.sleep(1800)  # Run every 30 minutes
-                health = await self.pipeline.get_system_health()
-                
-                if health['status'] != 'healthy':
-                    logger.warning(f"System health check: {health['status']}")
-                    for component, status in health['components'].items():
-                        if status != 'healthy':
-                            logger.warning(f"Component {component} is {status}")
-                else:
-                    logger.debug("System health check: all components healthy")
-                    
-            except asyncio.CancelledError:
-                break
+                await self.bot.send_message(
+                    chat_id=Config.ADMIN_CHAT_ID,
+                    text=startup_text
+                )
             except Exception as e:
-                logger.error(f"Health check failed: {e}")
+                logger.warning(f"Could not send startup message to admin: {e}")
+    
+    async def start_polling(self):
+        """Start the bot with polling."""
+        try:
+            # Initialize bot configuration
+            Config.validate()
+            
+            # Create bot and dispatcher
+            self.bot = Bot(
+                token=Config.TELEGRAM_BOT_TOKEN,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+            )
+            self.dp = Dispatcher()
+            
+            # Setup components
+            await self._setup_logging()
+            await self._setup_middleware()
+            await self._register_handlers()
+            await self._create_directories()
+            await self._setup_commands()
+            
+            logger.info("Starting Knowledge Bot...")
+            
+            # Send startup notification
+            await self._startup_message()
+            
+            # Start polling
+            await self.dp.start_polling(
+                self.bot,
+                allowed_updates=["message", "callback_query"]
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to start bot: {e}")
+            raise
     
     async def shutdown(self):
         """Graceful shutdown."""
+        logger.info("Shutting down Knowledge Bot...")
         
-        logger.info("Shutting down Enhanced Knowledge Bot...")
+        if self.bot:
+            await self.bot.session.close()
         
-        # Close pipeline
-        await self.pipeline.close()
-        
-        # Close bot session
-        await self.bot.session.close()
-        
-        logger.info("Shutdown complete")
+        logger.info("Knowledge Bot shutdown complete")
 
 
 async def main():
-    """Main application entry point."""
+    """Main entry point."""
+    # Print startup info
+    print("🚀 Knowledge Bot starting...")
+    print(f"📂 Working directory: {Path.cwd()}")
+    print(f"🐍 Python path: {Path.cwd() / 'venv' / 'bin' / 'python'}")
+    
+    app = KnowledgeBotApp()
     
     try:
-        # Create and start bot
-        bot = EnhancedKnowledgeBot()
-        await bot.start_polling()
-        
+        await app.start_polling()
     except KeyboardInterrupt:
         logger.info("Received interrupt signal")
     except Exception as e:
         logger.error(f"Application error: {e}")
         raise
     finally:
-        # Ensure cleanup
-        if 'bot' in locals():
-            await bot.shutdown()
+        await app.shutdown()
 
 
 if __name__ == "__main__":
-    # Handle different Python versions
     try:
         asyncio.run(main())
     except AttributeError:
-        # Python < 3.7
+        # Python < 3.7 compatibility
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(main())
