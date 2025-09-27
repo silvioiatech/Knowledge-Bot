@@ -7,7 +7,7 @@ import httpx
 from loguru import logger
 from PIL import Image
 
-from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, IMAGE_MODEL
+from config import Config
 from core.models.content_models import ImagePlan, GeneratedImage
 
 
@@ -18,14 +18,14 @@ class BananaImageProcessor:
         self.http_client = httpx.AsyncClient(
             timeout=120.0,  # Image generation can take time
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {Config.OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/silvioiatech/knowledge-bot",
                 "X-Title": "Knowledge Bot"
             }
         )
-        self.model = IMAGE_MODEL
-        self.base_url = OPENROUTER_BASE_URL
+        self.model = Config.IMAGE_MODEL
+        self.base_url = Config.OPENROUTER_BASE_URL
     
     async def generate_images(
         self,

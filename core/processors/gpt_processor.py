@@ -6,7 +6,7 @@ import re
 import httpx
 from loguru import logger
 
-from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, GPT_MODEL, GPT_MAX_TOKENS
+from config import Config
 from core.models.content_models import (
     GeminiAnalysis, ClaudeOutput, GeneratedImage, NotionPayload
 )
@@ -19,14 +19,14 @@ class GPTAssemblyProcessor:
         self.http_client = httpx.AsyncClient(
             timeout=60.0,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {Config.OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/silvioiatech/knowledge-bot",
                 "X-Title": "Knowledge Bot"
             }
         )
-        self.model = GPT_MODEL
-        self.base_url = OPENROUTER_BASE_URL
+        self.model = Config.GPT_MODEL
+        self.base_url = Config.OPENROUTER_BASE_URL
     
     async def assemble_final_content(
         self,

@@ -1,4 +1,14 @@
-"""Enhanced Claude processor for textbook-quality content generation."""
+"""Enhanced Claude        self.http_client = httpx.AsyncClient(
+            timeout=120.0,
+            headers={
+                "Authorization": f"Bearer {Config.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/silvioiatech/knowledge-bot",
+                "X-Title": "Knowledge Bot"
+            }
+        )
+        self.model = Config.CLAUDE_MODEL
+        self.base_url = Config.OPENROUTER_BASE_URLfor textbook-quality content generation."""
 
 from typing import Dict, Any, List
 import re
@@ -6,7 +16,7 @@ import re
 import httpx
 from loguru import logger
 
-from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, CLAUDE_MODEL, CLAUDE_MAX_TOKENS
+from config import Config
 from core.models.content_models import (
     GeminiAnalysis, ClaudeOutput, ImagePlan
 )
@@ -188,7 +198,7 @@ Generate the full, comprehensive guide following the structure above. Write subs
         
         payload = {
             "model": self.model,
-            "max_tokens": CLAUDE_MAX_TOKENS,  # Use configured token limit
+            "max_tokens": Config.CLAUDE_MAX_TOKENS,  # Use configured token limit
             "temperature": 0.3,
             "messages": messages
         }
@@ -372,7 +382,7 @@ Return the enhanced version of the complete content.
         
         payload = {
             "model": self.model,
-            "max_tokens": CLAUDE_MAX_TOKENS,
+            "max_tokens": Config.CLAUDE_MAX_TOKENS,
             "temperature": 0.2,
             "messages": messages
         }
