@@ -232,8 +232,8 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
     tools_mentioned = [entity.name for entity in analysis.entities if entity.type == 'technology'][:5]
     
     # Research findings
-    research_topics = analysis.research_queries if hasattr(analysis, 'research_queries') else []
-    web_sources = len(analysis.fact_checks) if hasattr(analysis, 'fact_checks') else 0
+    research_topics = [fact.original_claim for fact in analysis.web_research_facts][:5]
+    web_sources = len(analysis.web_research_facts)
     
     # Quality metrics
     confidence = analysis.quality_scores.overall
@@ -242,7 +242,7 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
     
     # Estimated output
     estimated_words = 2000 + (len(analysis.entities) * 30)
-    estimated_sections = len(analysis.content_outline.key_points) + 3
+    estimated_sections = len(analysis.content_outline.key_concepts) + 3
     
     preview = f"""
 🎥 <b>Technical Analysis Preview</b>
