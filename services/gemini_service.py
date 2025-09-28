@@ -5,6 +5,7 @@ import json
 import hashlib
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+from datetime import datetime
 
 import httpx
 import google.generativeai as genai
@@ -13,7 +14,7 @@ from loguru import logger
 from config import Config
 from core.models.content_models import (
     GeminiAnalysis, VideoMetadata, TranscriptSegment, 
-    Entity, ContentOutline, QualityScores
+    Entity, ContentOutline, QualityScores, WebResearchFact
 )
 
 
@@ -268,11 +269,11 @@ Ensure all technical terms are captured for research verification.
         # Create enhanced content outline
         enhanced_outline = ContentOutline(
             main_topic=initial_analysis["video_metadata"]["main_topic"],
-            category=self._determine_category(initial_analysis),
-            difficulty_level=initial_analysis["educational_objectives"]["difficulty_level"],
-            key_points=initial_analysis["content_outline"]["key_points"],
+            subtopics=initial_analysis["content_outline"].get("main_sections", []),
+            key_concepts=initial_analysis["content_outline"]["key_points"],
             learning_objectives=initial_analysis["educational_objectives"]["primary_learning_goals"],
-            prerequisites=initial_analysis["educational_objectives"]["prerequisites"]
+            prerequisites=initial_analysis["educational_objectives"]["prerequisites"],
+            difficulty_level=initial_analysis["educational_objectives"]["difficulty_level"]
         )
         
         # Extract entities with research context
@@ -312,28 +313,39 @@ Ensure all technical terms are captured for research verification.
         # Enhanced quality scores with research validation
         quality_raw = initial_analysis.get("quality_assessment", {})
         quality_scores = QualityScores(
-            content_completeness=quality_raw.get("completeness", 0.7),
-            technical_depth=quality_raw.get("technical_accuracy_confidence", 0.6),
-            educational_value=quality_raw.get("educational_value", 0.8),
-            research_validation=len(research_results) / max(len(research_queries), 1),  # Research coverage
-            overall=quality_raw.get("overall_quality", 0.7)
+            content_accuracy=quality_raw.get("technical_accuracy_confidence", 0.6) * 100,
+            technical_depth=quality_raw.get("technical_accuracy_confidence", 0.6) * 100,
+            educational_value=quality_raw.get("educational_value", 0.8) * 100,
+            source_credibility=len(research_results) / max(len(research_queries), 1) * 100,  # Research coverage
+            completeness=quality_raw.get("completeness", 0.7) * 100,
+            overall=quality_raw.get("overall_quality", 0.7) * 100
         )
+        
+        # Convert research results to WebResearchFact objects
+        web_research_facts = []
+        for result in research_results:
+            for finding in result.get("key_findings", []):
+                web_fact = WebResearchFact(
+                    original_claim=result["query"],
+                    corrected_info=finding,
+                    sources=[src.get("url", "") for src in result.get("sources", [])],
+                    confidence=0.8,
+                    research_timestamp=datetime.now(),
+                    is_correction=False
+                )
+                web_research_facts.append(web_fact)
         
         # Create enhanced analysis object
         enhanced_analysis = GeminiAnalysis(
             video_metadata=video_metadata,
             transcript=transcript,
             entities=entities,
-            content_outline=enhanced_outline,
+            claims=[],  # Empty for now, could be populated from factual_claims
+            ocr_results=[],  # Empty for now, no OCR in current implementation
+            web_research_facts=web_research_facts,
             quality_scores=quality_scores,
-            research_queries=research_queries,
-            fact_checks=research_results,
-            processing_metadata={
-                "research_sources_count": len(research_results),
-                "verification_coverage": len(research_results) / max(len(research_queries), 1),
-                "enhanced_analysis": True,
-                "analysis_timestamp": asyncio.get_event_loop().time()
-            }
+            content_outline=enhanced_outline,
+            citations=[src.get("url", "") for result in research_results for src in result.get("sources", [])]
         )
         
         return enhanced_analysis
