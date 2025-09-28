@@ -58,6 +58,15 @@ def _determine_content_category(analysis) -> str:
     elif any(term in main_topic or any(term in entity for entity in entities)
             for term in ["data science", "analytics", "database", "sql", "big data"]):
         return "📊 Data"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["mac", "macos", "osx", "macbook", "apple", "xcode", "homebrew"]):
+        return "🍎 macOS"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["linux", "ubuntu", "debian", "fedora", "arch", "centos", "unix", "bash", "terminal"]):
+        return "🐧 Linux"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["windows", "microsoft", "powershell", "cmd", "wsl", "visual studio"]):
+        return "🪟 Windows"
     else:
         return "📚 General Tech"
 markdown_storage = None

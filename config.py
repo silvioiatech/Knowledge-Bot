@@ -142,7 +142,10 @@ CATEGORY_MAPPINGS = {
     "⚙️ DevOps": ["devops", "docker", "kubernetes", "cloud", "aws", "deployment", "infrastructure"],
     "📱 Mobile": ["mobile", "ios", "android", "react native", "flutter", "swift", "kotlin"],
     "🛡️ Security": ["security", "cybersecurity", "encryption", "authentication", "vulnerability"],
-    "📊 Data": ["data science", "analytics", "database", "sql", "big data", "visualization"]
+    "📊 Data": ["data science", "analytics", "database", "sql", "big data", "visualization"],
+    "🍎 macOS": ["mac", "macos", "osx", "macbook", "apple", "xcode", "homebrew"],
+    "🐧 Linux": ["linux", "ubuntu", "debian", "fedora", "arch", "centos", "unix", "bash", "terminal"],
+    "🪟 Windows": ["windows", "microsoft", "powershell", "cmd", "wsl", "visual studio"]
 }
 
 # Export commonly used values for backwards compatibility
