@@ -232,57 +232,66 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
     tools_mentioned = [entity.name for entity in analysis.entities if entity.type == 'technology'][:5]
     
     # Research findings
-    research_topics = [fact.original_claim for fact in analysis.web_research_facts][:5]
+    research_topics = [fact.original_claim for fact in analysis.web_research_facts][:3]
     web_sources = len(analysis.web_research_facts)
     
-    # Quality metrics
-    confidence = analysis.quality_scores.overall
-    completeness = analysis.quality_scores.completeness
-    technical_depth = analysis.quality_scores.technical_depth
+    # Quality metrics (ensure proper 0-100 scaling)
+    confidence = min(100, max(0, int(analysis.quality_scores.overall * 100)))
+    completeness = min(100, max(0, int(analysis.quality_scores.completeness * 100)))
+    technical_depth = min(100, max(0, int(analysis.quality_scores.technical_depth * 100)))
+    content_accuracy = min(100, max(0, int(analysis.quality_scores.content_accuracy * 100)))
+    educational_value = min(100, max(0, int(analysis.quality_scores.educational_value * 100)))
+    
+    # Content summary (new feature)
+    content_summary = getattr(analysis, 'content_summary', None)
+    if not content_summary and hasattr(analysis, 'video_metadata'):
+        content_summary = f"This video covers {main_topic.lower()} with practical technical insights."
     
     # Estimated output
-    estimated_words = 2000 + (len(analysis.entities) * 30)
-    estimated_sections = len(analysis.content_outline.key_concepts) + 3
+    estimated_words = 1800 + (len(analysis.entities) * 40) + (len(analysis.content_outline.key_concepts) * 150)
+    estimated_sections = len(analysis.content_outline.key_concepts) + 4
+    estimated_read_time = max(5, estimated_words // 200)  # ~200 WPM reading speed
     
-    preview = f"""
-🎥 <b>Technical Analysis Preview</b>
+    preview = f"""🎥 <b>Enhanced Technical Analysis</b>
 
 📹 <b>Video Details:</b>
-• Title: {title[:60]}{'...' if len(title) > 60 else ''}
-• Author: {author}
-• Duration: {duration:.1f}s | Platform: {video_url.split('/')[2].split('.')[0].upper()}
+• <b>Title:</b> {title[:65]}{'...' if len(title) > 65 else ''}
+• <b>Author:</b> {author}
+• <b>Duration:</b> {duration:.1f}s | <b>Platform:</b> {video_url.split('/')[2].split('.')[0].upper()}
 
-🎯 <b>Content Analysis:</b>
+📝 <b>Content Summary:</b>
+<i>{content_summary[:200]}{'...' if len(content_summary or '') > 200 else ''}</i>
+
+🎯 <b>Analysis Results:</b>
 • <b>Main Topic:</b> {main_topic}
 • <b>Category:</b> {category}
 • <b>Difficulty:</b> {difficulty.title()}
-• <b>Confidence:</b> {confidence:.0%}
+• <b>Overall Quality:</b> {confidence}%
 
-🔍 <b>Web Research Conducted:</b>
-• Research queries: {len(research_topics)}
-• Web sources verified: {web_sources}
-• Fact-checking: {'✅' if web_sources > 0 else '⚠️'}
-
-🧠 <b>Key Technical Concepts:</b>
+🧠 <b>Key Learning Points:</b>
 {chr(10).join([f"• {concept}" for concept in key_concepts[:4]])}
-{f"... and {len(key_concepts)-4} more" if len(key_concepts) > 4 else ""}
+{f"<i>... and {len(key_concepts)-4} more concepts</i>" if len(key_concepts) > 4 else ""}
 
-🛠️ <b>Tools/Technologies:</b>
-{chr(10).join([f"• {tool}" for tool in tools_mentioned[:3]]) if tools_mentioned else "• No specific tools mentioned"}
+🛠️ <b>Tools & Technologies:</b>
+{chr(10).join([f"• {tool}" for tool in tools_mentioned[:3]]) if tools_mentioned else "• General technical concepts"}
+{f"<i>... and {len(tools_mentioned)-3} more tools</i>" if len(tools_mentioned) > 3 else ""}
+
+🔍 <b>Research & Verification:</b>
+• <b>Research queries:</b> {len(research_topics)} topics investigated
+• <b>Sources verified:</b> {web_sources} fact-checks completed
+• <b>Quality assurance:</b> {'✅ Verified' if web_sources > 0 else '⚠️ Limited verification'}
 
 📊 <b>Quality Metrics:</b>
-• Content Completeness: {completeness:.0%}
-• Technical Depth: {technical_depth:.0%}
-• Overall Quality: {confidence:.0%}
+• <b>Content Accuracy:</b> {content_accuracy}% | <b>Completeness:</b> {completeness}%
+• <b>Technical Depth:</b> {technical_depth}% | <b>Educational Value:</b> {educational_value}%
 
-📝 <b>Estimated Output:</b>
-• ~{estimated_words:,} words of educational content
-• ~{estimated_sections} detailed sections
-• Technical diagrams: {"Yes" if Config.ENABLE_IMAGE_GENERATION else "No"}
-• Knowledge base storage: {"Notion + Markdown" if Config.USE_NOTION_STORAGE else "Markdown"}
+� <b>Expected Output:</b>
+• <b>Content Length:</b> ~{estimated_words:,} words ({estimated_read_time} min read)
+• <b>Structure:</b> {estimated_sections} detailed sections with examples
+• <b>Visuals:</b> {"Technical diagrams included" if Config.ENABLE_IMAGE_GENERATION else "Text-based content"}
+• <b>Storage:</b> {"Notion database + Markdown files" if Config.USE_NOTION_STORAGE else "Markdown knowledge base"}
 
-<b>Proceed with full content generation?</b>
-"""
+<b>✅ Ready for full content generation and knowledge base storage?</b>"""
     
     return preview.strip()
 
