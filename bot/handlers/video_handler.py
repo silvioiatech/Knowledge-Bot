@@ -29,6 +29,37 @@ railway_client = None
 gemini_service = None
 claude_service = None
 image_service = None
+
+
+def _determine_content_category(analysis) -> str:
+    """Determine content category from analysis."""
+    main_topic = analysis.content_outline.main_topic.lower()
+    entities = [entity.name.lower() for entity in analysis.entities]
+    
+    # Category mapping based on content
+    if any(term in main_topic or any(term in entity for entity in entities) 
+           for term in ["ai", "machine learning", "llm", "neural", "gpt", "claude"]):
+        return "🤖 AI"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["web", "javascript", "react", "vue", "html", "css"]):
+        return "🌐 Web Development"  
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["python", "java", "golang", "rust", "programming"]):
+        return "💻 Programming"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["devops", "docker", "kubernetes", "cloud", "aws"]):
+        return "⚙️ DevOps"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["mobile", "ios", "android", "react native", "flutter"]):
+        return "📱 Mobile"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["security", "cybersecurity", "encryption", "authentication"]):
+        return "🛡️ Security"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["data science", "analytics", "database", "sql", "big data"]):
+        return "📊 Data"
+    else:
+        return "📚 General Tech"
 markdown_storage = None
 notion_storage = None
 pipeline = None
@@ -184,7 +215,7 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
     
     # Main topic and category
     main_topic = analysis.content_outline.main_topic
-    category = analysis.content_outline.category
+    category = _determine_content_category(analysis)
     difficulty = analysis.content_outline.difficulty_level
     
     # Key concepts and tools
@@ -197,7 +228,7 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
     
     # Quality metrics
     confidence = analysis.quality_scores.overall
-    completeness = analysis.quality_scores.content_completeness
+    completeness = analysis.quality_scores.completeness
     technical_depth = analysis.quality_scores.technical_depth
     
     # Estimated output

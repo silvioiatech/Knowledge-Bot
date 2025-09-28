@@ -276,6 +276,19 @@ class NotionPayload:
         }
 
 @dataclass
+class ContentData:
+    """Content data for book storage."""
+    title: str
+    source_url: str
+    category: str
+    tools: List[str]
+    tags: List[str]
+    summary: str
+    enriched_content: str
+    resources: List[str] = field(default_factory=list)
+    generated_images: List[str] = field(default_factory=list)
+
+@dataclass
 class ProcessingResult:
     """Final result of the entire processing pipeline."""
     gemini_analysis: GeminiAnalysis
