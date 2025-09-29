@@ -106,24 +106,27 @@ class EnhancedGeminiService:
                 name=entity_data.get("name", ""),
                 type=entity_data.get("type", "concept"),
                 confidence=0.8,
-                context=entity_data.get("context", "")
+                description=entity_data.get("context", "")
             ))
         
         # Create content outline
         content_outline = ContentOutline(
             main_topic=analysis.get("educational_objectives", {}).get("primary_learning_goals", ["General"])[0],
+            subtopics=analysis.get("educational_objectives", {}).get("subtopics", []),
             key_concepts=[entity.name for entity in entities[:5]],
-            difficulty_level=analysis.get("educational_objectives", {}).get("difficulty_level", "intermediate"),
-            estimated_duration=analysis.get("video_metadata", {}).get("duration_seconds", 0) // 60
+            learning_objectives=analysis.get("educational_objectives", {}).get("primary_learning_goals", [])[:3],
+            prerequisites=analysis.get("educational_objectives", {}).get("prerequisites", []),
+            difficulty_level=analysis.get("educational_objectives", {}).get("difficulty_level", "intermediate")
         )
         
         # Create quality scores (realistic, capped at 100)
         quality_scores = QualityScores(
             overall=min(85.0, max(60.0, len(entities) * 10 + 50)),  # 60-85 range
             technical_depth=min(80.0, max(50.0, len(entities) * 8 + 40)),
-            clarity=min(90.0, max(70.0, len(transcript) * 5 + 60)),
+            content_accuracy=min(90.0, max(70.0, len(transcript) * 5 + 60)),
             completeness=min(85.0, max(65.0, len(analysis.get("key_points", [])) * 15 + 50)),
-            educational_value=min(90.0, max(70.0, len(content_outline.key_concepts) * 12 + 55))
+            educational_value=min(90.0, max(70.0, len(content_outline.key_concepts) * 12 + 55)),
+            source_credibility=min(75.0, max(55.0, len(analysis.get("technical_concepts", [])) * 8 + 45))
         )
         
         return GeminiAnalysis(
