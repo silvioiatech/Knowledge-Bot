@@ -1,296 +1,881 @@
-# 🤖 Knowledge Bot# � AI Knowledge Bot - Textbook Edition
+# 🤖 Knowledge Bot# 🤖 Knowledge Bot# 🤖 Knowledge Bot# � AI Knowledge Bot - Textbook Edition
 
 
 
-Transform TikTok and Instagram videos into comprehensive knowledge base entries using AI-powered analysis and content generation.A powerful Python Telegram bot that transforms TikTok/Instagram videos into **comprehensive, illustrated textbook-quality content**. Uses advanced AI to analyze video content and generate professional reference material with technical diagrams.🤖 AI Knowledge Bot
+A powerful Python Telegram bot that transforms TikTok and Instagram videos into organized knowledge base entries using AI-powered analysis and content generation.
 
 
 
-## ✨ FeaturesA powerful Python Telegram bot that transforms TikTok/Instagram videos into organized knowledge entries. Uses AI to analyze video conten## 📦 Storage Modes
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)A powerful Python Telegram bot that transforms TikTok and Instagram videos into organized knowledge base entries using AI-powered analysis and content generation.
+
+[![Railway](https://img.shields.io/badge/Deploy-Railway-purple.svg)](https://railway.app)
+
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 
 
-- **📥 Video Download**: Automatic video download from TikTok and Instagram### 📝 **Markdown Mode** (Default)
-
-- **🧠 AI Analysis**: Deep content analysis with Google Gemini- Simple markdown files in `./knowledge_base/`
-
-- **📝 Content Generation**: Textbook-quality content creation with Claude- Works with any text editor
-
-- **🖼️ Diagram Generation**: AI-generated technical diagrams- Easy to backup and version control
-
-- **💾 Smart Storage**: Markdown files + optional Notion database integration
-
-- **🎯 Interactive Workflow**: Approve/reject analysis before content generation### 📖 **Book Mode** (Obsidian)
-
-- Beautiful book-like formatting
-
-## 🚀 Quick Start- Auto-categorization into sections
-
-- Cross-references and navigation
-
-### 1. Clone and Setup- Perfect for Obsidian users
+## ✨ Features[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)Transform TikTok and Instagram videos into comprehensive knowledge base entries using AI-powered analysis and content generation.A powerful Python Telegram bot that transforms TikTok/Instagram videos into **comprehensive, illustrated textbook-quality content**. Uses advanced AI to analyze video content and generate professional reference material with technical diagrams.🤖 AI Knowledge Bot
 
 
 
-```bash### 🗄️ **Notion Database Mode** (NEW!)
+### 🎥 **Smart Video Processing**[![Railway](https://img.shields.io/badge/Deploy-Railway-purple.svg)](https://railway.app)
 
-git clone https://github.com/silvioiatech/Knowledge-Bot.git- Cloud-based Notion database storage
+- **Automatic Download**: TikTok and Instagram URL support
 
-cd Knowledge-Bot- Automatic categorization with emojis
+- **Multiple Formats**: Handles various video formats automatically[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-pip install -r requirements.txt- Rich properties (tags, difficulty, tools)
-
-```- Web access and mobile sync
+- **Railway Integration**: Reliable cloud-based video downloading
 
 
 
-### 2. Configure Environment#### Notion Setup
+### 🧠 **AI-Powered Analysis**
+
+- **Google Gemini**: Advanced video content analysis## ✨ Features## ✨ FeaturesA powerful Python Telegram bot that transforms TikTok/Instagram videos into organized knowledge entries. Uses AI to analyze video conten## 📦 Storage Modes
+
+- **Claude 3.5 Sonnet**: Professional content enrichment via OpenRouter
+
+- **Structured Output**: Extracts topics, tools, key points, and resources
+
+
+
+### 💾 **Flexible Storage**### 🎥 **Smart Video Processing**
+
+- **Railway Files**: Persistent cloud storage with web browsing
+
+- **Notion Database**: Optional cloud database integration- **Automatic Download**: TikTok and Instagram URL support
+
+- **Markdown Files**: Local storage in organized categories
+
+- **Multiple Formats**: Handles various video formats automatically- **📥 Video Download**: Automatic video download from TikTok and Instagram### 📝 **Markdown Mode** (Default)
+
+### 🎯 **Interactive Workflow**
+
+- **Preview & Approve**: Review analysis before content generation- **Railway Integration**: Reliable cloud-based video downloading
+
+- **Quality Control**: Approve, reject, or re-analyze videos
+
+- **Session Management**: Non-blocking processing for multiple users- **🧠 AI Analysis**: Deep content analysis with Google Gemini- Simple markdown files in `./knowledge_base/`
+
+
+
+## 🚀 Quick Start### 🧠 **AI-Powered Analysis**
+
+
+
+### 1. **Clone Repository**- **Google Gemini**: Advanced video content analysis- **📝 Content Generation**: Textbook-quality content creation with Claude- Works with any text editor
 
 ```bash
 
-```bash# In your .env file
+git clone https://github.com/silvioiatech/Knowledge-Bot.git- **Claude 3.5 Sonnet**: Professional content enrichment via OpenRouter
 
-cp .env.example .envUSE_NOTION_STORAGE=true
+cd Knowledge-Bot
 
-# Edit .env with your API keysNOTION_API_KEY=secret_your_integration_key
-
-```NOTION_DATABASE_ID=your_database_id_here
+pip install -r requirements.txt- **Structured Output**: Extracts topics, tools, key points, and resources- **🖼️ Diagram Generation**: AI-generated technical diagrams- Easy to backup and version control
 
 ```
+
+
+
+### 2. **Configure Environment**
+
+```bash### 💾 **Flexible Storage**- **💾 Smart Storage**: Markdown files + optional Notion database integration
+
+cp .env.example .env
+
+# Edit .env with your API keys- **Railway Files**: Persistent cloud storage with web browsing
+
+```
+
+- **Notion Database**: Optional cloud database integration- **🎯 Interactive Workflow**: Approve/reject analysis before content generation### 📖 **Book Mode** (Obsidian)
 
 **Required API Keys:**
 
-- `TELEGRAM_BOT_TOKEN` - Get from [@BotFather](https://t.me/botfather)**Required Database Properties:**
+- **Telegram Bot Token**: Get from [@BotFather](https://t.me/botfather)- **Markdown Files**: Local storage in organized categories
 
-- `GEMINI_API_KEY` - Get from [Google AI Studio](https://makersuite.google.com/)- Title (title)
+- **Gemini API Key**: Get from [Google AI Studio](https://aistudio.google.com)
 
-- `OPENROUTER_API_KEY` - Get from [OpenRouter](https://openrouter.ai/)- Category (select) - Auto-categorized with emojis
-
-- Subcategory (select)
-
-### 3. Run the Bot- Tags (multi_select)
-
-- Tools Mentioned (multi_select)
-
-```bash- Difficulty (select) - 🟢 Beginner, 🟡 Intermediate, 🔴 Advanced
-
-python app.py- Source Video (url)
-
-```- Date Added (date)
+- **OpenRouter API Key**: Get from [OpenRouter](https://openrouter.ai)- Beautiful book-like formatting
 
 
 
-## 📋 Environment VariablesTo enable Book Mode:
+### 3. **Run the Bot**### 🎯 **Interactive Workflow**
 
 ```bash
 
-### Core Configuration# In your .env file
-
-```envSTORAGE_MODE=book
-
-TELEGRAM_BOT_TOKEN=your_telegram_bot_tokenOBSIDIAN_VAULT_PATH=./my-knowledge-library
-
-GEMINI_API_KEY=your_gemini_api_keyENABLE_BOOK_STRUCTURE=true
-
-OPENROUTER_API_KEY=your_openrouter_api_key```creates beautiful, searchable knowledge bases.
+python app.py- **Preview & Approve**: Review analysis before content generation## 🚀 Quick Start- Auto-categorization into sections
 
 ```
 
-## ✨ Features
+- **Quality Control**: Approve, reject, or re-analyze videos
 
-### Optional Services
+## 📋 Environment Configuration
 
-```env### 🎥 **Smart Video Processing**
+- **Session Management**: Non-blocking processing for multiple users- Cross-references and navigation
 
-# Railway video download service- Downloads from TikTok & Instagram URLs
-
-RAILWAY_API_URL=https://your-railway-service.up.railway.app- Handles multiple video formats automatically
-
-- Railway.app integration for reliable downloading
-
-# Notion database integration
-
-NOTION_API_KEY=your_notion_api_key### 🧠 **Advanced AI-Powered Analysis**
-
-NOTION_DATABASE_ID=your_database_id- **Google Gemini 1.5 Pro** - Comprehensive video content analysis with 20+ data fields
-
-USE_NOTION_STORAGE=true- **Claude 3.5 Sonnet** - Textbook-quality content generation (2500-4000 words)
-
-- **Gemini 2.5 Flash Image Preview** - AI-generated technical diagrams and illustrations
-
-# Image generation- Extracts category confidence, visual concepts, code snippets, performance metrics
-
-ENABLE_IMAGE_GENERATION=true
-
-IMAGE_MODEL=black-forest-labs/flux-1.1-pro### 📚 **Professional Reference Material**
-
-```- **Textbook-Quality Content**: Comprehensive 3000+ word technical documentation
-
-- **AI-Generated Diagrams**: Up to 3 technical illustrations per entry
-
-## 🏗️ Project Structure- **Advanced Categorization**: Confidence scoring and auto-review flagging
-
-- **Multiple Storage Options**: Notion database, Obsidian books, or markdown files
-
-```- **Cost Tracking**: Token usage monitoring and pricing analytics
-
-Knowledge-Bot/
-
-├── app.py                      # Main entry point### 🎨 **New: AI-Generated Technical Diagrams**
-
-├── config.py                   # Configuration management- **Gemini 2.5 Flash Image Preview** creates professional technical illustrations
-
-├── requirements.txt            # Dependencies- Automatically detects diagram opportunities in content
-
-├── .env.example               # Environment template- Generates: flowcharts, system architectures, process diagrams, UI mockups
-
-├── bot/- Embedded directly into textbook-quality content with proper captions
-
-│   ├── main.py                # Bot initialization
-
-│   ├── middleware.py          # Rate limiting & logging### 📊 **Enhanced Analytics & Quality Control**
-
-│   └── handlers/- **Category Confidence Scoring**: Auto-flags uncertain classifications for review
-
-│       └── video_handler.py   # Video processing workflow- **Content Quality Metrics**: Tracks comprehensive analysis depth (20+ fields)
-
-├── services/- **Cost Analytics**: Real-time token usage and pricing with OpenRouter integration
-
-│   ├── railway_client.py      # Video download service- **Dynamic Category Management**: Learns and adapts categorization over time
-
-│   ├── gemini_service.py      # AI video analysis
-
-│   ├── claude_service.py      # Content enrichment### 🔒 **Privacy & Control**
-
-│   └── image_generation_service.py # Diagram generation- Interactive approval system - you control what gets saved
-
-├── storage/- Private repository integration for personal knowledge
-
-│   ├── markdown_storage.py    # Markdown file management- Rate limiting and user management
-
-│   └── notion_storage.py      # Notion database integration- Local or cloud storage options
-
-└── core/models/
-
-    └── content_models.py      # Data models### 📱 **Multi-Platform Access**
-
-```- Works with any Markdown editor
-
-- Obsidian mobile app support
-
-## 🎯 How It Works- GitHub integration for sync across devices
-
-
-
-1. **Send Video URL** → Bot receives TikTok/Instagram video URL## 🏗️ Project Structure
-
-2. **Download Video** → Railway service downloads the video file
-
-3. **AI Analysis** → Gemini analyzes video content and extracts insights```
-
-4. **Preview & Approval** → Interactive preview with approve/reject optionsKnowledge-Bot/
-
-5. **Content Generation** → Claude creates comprehensive educational content├── 📁 bot/
-
-6. **Save Results** → Store in Markdown files and/or Notion database│   ├── main.py              # aiogram bot initialization
-
-│   └── handlers/
-
-## 🔧 Supported Platforms│       └── video_handler.py # Video processing workflow
-
-├── 📁 services/
-
-- **TikTok**: `tiktok.com/@user/video/...`│   ├── railway_client.py           # Video download service  
-
-- **Instagram**: `instagram.com/p/...` and `instagram.com/reel/...`│   ├── gemini_service.py           # Comprehensive AI video analysis
-
-│   ├── claude_service.py           # Textbook-quality content generation
-
-## 📊 Output Examples│   ├── image_generation_service.py # AI-powered technical diagrams
-
-│   └── git_sync.py                 # GitHub integration
-
-### Markdown Files├── 📁 storage/
-
-```markdown│   ├── markdown_storage.py  # Simple markdown files
-
-# Advanced Python AsyncIO Patterns│   ├── book_storage.py      # Obsidian book format
-
-│   └── notion_storage.py    # Notion database integration
-
-## Overview├── ⚙️ config.py             # Configuration management
-
-Learn modern asynchronous programming patterns...├── 🚀 app.py               # Main application entry
-
-└── 📖 PRIVATE_REPOSITORY_SETUP.md  # Setup guide
-
-## Key Concepts│   └── claude_service.py    # Claude content enrichment
-
-- Event loops and coroutines├── storage/
-
-- Error handling in async code│   └── markdown_storage.py  # Markdown file management
-
-- Performance optimization techniques├── config.py                # Configuration & environment
-
-├── run_bot.py              # Main entry point
-
-## Tools & Technologies└── knowledge_base/          # Generated knowledge base
-
-- Python AsyncIO    ├── artificial-intelligence/
-
-- aiohttp    ├── development/
-
-- asyncpg    ├── design/
-
-```    └── ...
-
-```
-
-### Notion Database
-
-Automatically creates entries with:## 🚀 Quick Start
-
-- Title, Category, Tags
-
-- Content Quality Score### 1. Installation
-
-- Word Count, Processing Date
-
-- Key Points, Tools Used```bash
-
-- Source URL and Platform# Clone repository
-
-git clone https://github.com/silvioiatech/Knowledge-Bot.git
-
-## 🚨 Troubleshootingcd Knowledge-Bot
-
-
-
-### Common Issues# Install dependencies
-
-pip install -r requirements.txt
-
-**❌ "Gemini API Error: Model not found"**```
+### Core Settings
 
 ```env
 
+# Telegram Bot
+
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here## 🚀 Quick Start### 1. Clone and Setup- Perfect for Obsidian users
+
+
+
+# AI Services
+
+GEMINI_API_KEY=your_gemini_api_key_here
+
+OPENROUTER_API_KEY=your_openrouter_api_key_here### 1. **Clone Repository**
+
+
+
+# Railway Deployment```bash
+
+RAILWAY_STATIC_URL=https://your-app.up.railway.app
+
+KNOWLEDGE_BASE_PATH=/app/knowledge_basegit clone https://github.com/silvioiatech/Knowledge-Bot.git```bash### 🗄️ **Notion Database Mode** (NEW!)
+
+```
+
+cd Knowledge-Bot
+
+### Optional Integrations
+
+```envpip install -r requirements.txtgit clone https://github.com/silvioiatech/Knowledge-Bot.git- Cloud-based Notion database storage
+
+# Notion Database (Optional)
+
+USE_NOTION_STORAGE=true```
+
+NOTION_API_KEY=secret_your_notion_integration_key
+
+NOTION_DATABASE_ID=your_database_id_herecd Knowledge-Bot- Automatic categorization with emojis
+
+```
+
+### 2. **Configure Environment**
+
+See [`.env.example`](.env.example) for complete configuration options.
+
+```bashpip install -r requirements.txt- Rich properties (tags, difficulty, tools)
+
+## 🏗️ Architecture
+
+cp .env.example .env
+
+### Core Components
+
+```# Edit .env with your API keys```- Web access and mobile sync
+
+Knowledge-Bot/
+
+├── 🤖 app.py                     # Main entry point (bot + file server)```
+
+├── 🌐 railway_server.py          # FastAPI file server for web browsing
+
+├── ⚙️ config.py                  # Environment configuration
+
+├── 📁 bot/
+
+│   ├── main.py                   # Telegram bot initialization**Required API Keys:**
+
+│   ├── middleware.py             # Rate limiting & session management
+
+│   └── handlers/- **Telegram Bot Token**: Get from [@BotFather](https://t.me/botfather)### 2. Configure Environment#### Notion Setup
+
+│       └── video_handler.py      # Video processing workflow
+
+├── 🔧 services/- **Gemini API Key**: Get from [Google AI Studio](https://aistudio.google.com)
+
+│   ├── gemini_service.py         # AI video analysis
+
+│   ├── claude_service.py         # Content enrichment- **OpenRouter API Key**: Get from [OpenRouter](https://openrouter.ai)```bash
+
+│   ├── image_generation_service.py # AI-powered technical diagrams
+
+│   └── railway_client.py         # Video download service
+
+├── 💾 storage/
+
+│   ├── railway_storage.py        # Railway persistent files### 3. **Run the Bot**```bash# In your .env file
+
+│   ├── notion_storage.py         # Notion database integration
+
+│   └── markdown_storage.py       # Local markdown storage```bash
+
+└── 🛠️ utils/
+
+    └── retry_utils.py            # Retry logic with exponential backoffpython app.pycp .env.example .envUSE_NOTION_STORAGE=true
+
+```
+
+```
+
+## 🎯 How It Works
+
+# Edit .env with your API keysNOTION_API_KEY=secret_your_integration_key
+
+1. **📱 Send Video URL** → User sends TikTok/Instagram video URL
+
+2. **📥 Download Video** → Railway service downloads the video file## 📋 Environment Configuration
+
+3. **🧠 AI Analysis** → Gemini analyzes content and extracts insights
+
+4. **✅ Preview & Approval** → Interactive preview with approve/reject buttons```NOTION_DATABASE_ID=your_database_id_here
+
+5. **📝 Content Generation** → Claude creates comprehensive educational content
+
+6. **💾 Save Results** → Store in Railway files with web access + optional Notion backup### Core Settings
+
+
+
+## 📊 Output Examples```env```
+
+
+
+### Markdown Files# Telegram Bot
+
+```markdown
+
+---TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here**Required API Keys:**
+
+title: "Advanced Python AsyncIO Patterns"
+
+date: "2024-01-15T10:30:00"
+
+source_url: "https://tiktok.com/@user/video/123"
+
+platform: "tiktok"# AI Services- `TELEGRAM_BOT_TOKEN` - Get from [@BotFather](https://t.me/botfather)**Required Database Properties:**
+
+category: "programming"
+
+tools: ["Python", "AsyncIO", "aiohttp"]GEMINI_API_KEY=your_gemini_api_key_here
+
+tags: ["python", "async", "performance"]
+
+quality_score: 85OPENROUTER_API_KEY=your_openrouter_api_key_here- `GEMINI_API_KEY` - Get from [Google AI Studio](https://makersuite.google.com/)- Title (title)
+
+---
+
+
+
+# Advanced Python AsyncIO Patterns
+
+# Railway Deployment- `OPENROUTER_API_KEY` - Get from [OpenRouter](https://openrouter.ai/)- Category (select) - Auto-categorized with emojis
+
+## Overview
+
+Comprehensive guide to modern asynchronous programming in Python...RAILWAY_STATIC_URL=https://your-app.up.railway.app
+
+
+
+## Key ConceptsKNOWLEDGE_BASE_PATH=/app/knowledge_base- Subcategory (select)
+
+- Event loops and coroutines
+
+- Error handling in async code```
+
+- Performance optimization techniques
+
+### 3. Run the Bot- Tags (multi_select)
+
+## Tools & Technologies
+
+- **Python AsyncIO**: Core async framework### Optional Integrations
+
+- **aiohttp**: Async HTTP client/server
+
+- **asyncpg**: Async PostgreSQL driver```env- Tools Mentioned (multi_select)
+
+
+
+## Practical Examples# Notion Database (Optional)
+
+[Code examples and implementation details...]
+
+USE_NOTION_STORAGE=true```bash- Difficulty (select) - 🟢 Beginner, 🟡 Intermediate, 🔴 Advanced
+
+## Additional Resources
+
+- [Official AsyncIO Documentation](https://docs.python.org/3/library/asyncio.html)NOTION_API_KEY=secret_your_notion_integration_key
+
+- [Real Python AsyncIO Guide](https://realpython.com/async-io-python/)
+
+```NOTION_DATABASE_ID=your_database_id_herepython app.py- Source Video (url)
+
+
+
+### Railway Web Access```
+
+- **Browse Categories**: `https://your-app.up.railway.app/kb/`
+
+- **View Files**: `https://your-app.up.railway.app/view/programming/asyncio-patterns.md````- Date Added (date)
+
+- **Download Raw**: `https://your-app.up.railway.app/raw/programming/asyncio-patterns.md`
+
+See [`.env.example`](.env.example) for complete configuration options.
+
+## 🚀 Railway Deployment
+
+
+
+### 1. **Setup Railway**
+
+```bash## 🏗️ Architecture
+
+# Install Railway CLI
+
+npm install -g @railway/cli## 📋 Environment VariablesTo enable Book Mode:
+
+
+
+# Login and deploy### Core Components
+
+railway login
+
+railway link``````bash
+
+railway add volume --name knowledge-base --mount /app/knowledge_base
+
+railway deployKnowledge-Bot/
+
+```
+
+├── 🤖 app.py                     # Main entry point (bot + file server)### Core Configuration# In your .env file
+
+### 2. **Environment Variables**
+
+Set in Railway dashboard:├── 🌐 railway_server.py          # FastAPI file server for web browsing
+
+```env
+
+TELEGRAM_BOT_TOKEN=your_token├── ⚙️ config.py                  # Environment configuration```envSTORAGE_MODE=book
+
+GEMINI_API_KEY=your_key
+
+OPENROUTER_API_KEY=your_key├── 📁 bot/
+
+RAILWAY_STATIC_URL=https://your-app.up.railway.app
+
+PORT=8000│   ├── main.py                   # Telegram bot initializationTELEGRAM_BOT_TOKEN=your_telegram_bot_tokenOBSIDIAN_VAULT_PATH=./my-knowledge-library
+
+```
+
+│   ├── middleware.py             # Rate limiting & session management
+
+### 3. **Access Your Knowledge Base**
+
+- **Web Browser**: `https://your-app.up.railway.app/kb/`│   └── handlers/GEMINI_API_KEY=your_gemini_api_keyENABLE_BOOK_STRUCTURE=true
+
+- **File Viewer**: `https://your-app.up.railway.app/view/category/file.md`
+
+- **API Health**: `https://your-app.up.railway.app/health`│       └── video_handler.py      # Video processing workflow
+
+
+
+## 🔧 Supported Platforms├── 🔧 services/OPENROUTER_API_KEY=your_openrouter_api_key```creates beautiful, searchable knowledge bases.
+
+
+
+| Platform | URL Format | Status |│   ├── gemini_service.py         # AI video analysis
+
+|----------|------------|--------|
+
+| **TikTok** | `tiktok.com/@user/video/...` | ✅ Supported |│   ├── claude_service.py         # Content enrichment```
+
+| **Instagram** | `instagram.com/p/...` | ✅ Supported |
+
+| **Instagram Reels** | `instagram.com/reel/...` | ✅ Supported |│   └── railway_client.py         # Video download service
+
+
+
+## 📱 Usage Workflow├── 💾 storage/## ✨ Features
+
+
+
+1. **Start Bot**: Send `/start` to initialize│   ├── railway_storage.py        # Railway persistent files
+
+2. **Send URL**: Share a TikTok or Instagram video URL
+
+3. **Processing**: Bot downloads and analyzes (progress updates shown)│   ├── notion_storage.py         # Notion database integration### Optional Services
+
+4. **Review**: Get analysis summary with quality score
+
+5. **Approve/Reject**: Use ✅ Approve, ❌ Reject, or 🔄 Re-analyze buttons│   └── markdown_storage.py       # Local markdown storage
+
+6. **Access Content**: Get Railway URL for immediate web access
+
+└── 🛠️ utils/```env### 🎥 **Smart Video Processing**
+
+## 🚨 Troubleshooting
+
+    └── retry_utils.py            # Retry logic with exponential backoff
+
+### Common Issues
+
+```# Railway video download service- Downloads from TikTok & Instagram URLs
+
+#### ❌ Gemini API Errors
+
+```
+
+404 Model not found: projects/generativelanguage-ga/...
+
+```## 🎯 How It WorksRAILWAY_API_URL=https://your-railway-service.up.railway.app- Handles multiple video formats automatically
+
+**Solution**: Use correct model names
+
+```env
+
+GEMINI_MODEL=gemini-1.5-flash  # ✅ Correct
+
+GEMINI_MODEL=gemini-1.5-pro    # ✅ Correct1. **📱 Send Video URL** → User sends TikTok/Instagram video URL- Railway.app integration for reliable downloading
+
+```
+
+2. **📥 Download Video** → Railway service downloads the video file
+
+#### ❌ OpenRouter API Errors
+
+**Check**: 3. **🧠 AI Analysis** → Gemini analyzes content and extracts insights# Notion database integration
+
+- API key is valid at [OpenRouter](https://openrouter.ai)
+
+- Account has sufficient credits4. **✅ Preview & Approval** → Interactive preview with approve/reject buttons
+
+- Model name is correct: `anthropic/claude-3.5-sonnet`
+
+5. **📝 Content Generation** → Claude creates comprehensive educational contentNOTION_API_KEY=your_notion_api_key### 🧠 **Advanced AI-Powered Analysis**
+
+#### ❌ Video Download Failures
+
+**TikTok videos may fail initially** - this is normal behavior. The bot automatically retries failed downloads.6. **💾 Save Results** → Store in Railway files with web access + optional Notion backup
+
+
+
+#### ❌ Memory IssuesNOTION_DATABASE_ID=your_database_id- **Google Gemini 1.5 Pro** - Comprehensive video content analysis with 20+ data fields
+
+**Fixed in latest version**:
+
+- Session TTL management (30-minute expiration)## 📊 Output Examples
+
+- Background cleanup tasks
+
+- Proper async processingUSE_NOTION_STORAGE=true- **Claude 3.5 Sonnet** - Textbook-quality content generation (2500-4000 words)
+
+
+
+## 🔒 Production Features### Markdown Files
+
+
+
+### Security & Reliability```markdown- **Gemini 2.5 Flash Image Preview** - AI-generated technical diagrams and illustrations
+
+- ✅ **Rate Limiting**: 10 videos per user per hour
+
+- ✅ **Session Management**: TTL-based cleanup prevents memory leaks---
+
+- ✅ **Retry Logic**: Exponential backoff for API failures
+
+- ✅ **Error Recovery**: Comprehensive error handling and user feedbacktitle: "Advanced Python AsyncIO Patterns"# Image generation- Extracts category confidence, visual concepts, code snippets, performance metrics
+
+
+
+### Quality Controldate: "2024-01-15T10:30:00"
+
+- ✅ **Realistic Quality Scores**: Capped at 60-90% range
+
+- ✅ **Content Validation**: Interactive approval workflowsource_url: "https://tiktok.com/@user/video/123"ENABLE_IMAGE_GENERATION=true
+
+- ✅ **Honest Features**: No fake capabilities or impossible metrics
+
+platform: "tiktok"
+
+### Performance
+
+- ✅ **Non-blocking Processing**: Multiple users can process simultaneouslycategory: "programming"IMAGE_MODEL=black-forest-labs/flux-1.1-pro### 📚 **Professional Reference Material**
+
+- ✅ **Service Singleton Pattern**: Efficient resource usage
+
+- ✅ **Persistent Storage**: Railway files survive deploymentstools: ["Python", "AsyncIO", "aiohttp"]
+
+
+
+## 📝 Configuration Referencetags: ["python", "async", "performance"]```- **Textbook-Quality Content**: Comprehensive 3000+ word technical documentation
+
+
+
+| Variable | Description | Default | Required |quality_score: 85
+
+|----------|-------------|---------|----------|
+
+| `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | - | ✅ |---- **AI-Generated Diagrams**: Up to 3 technical illustrations per entry
+
+| `GEMINI_API_KEY` | Google Gemini API key | - | ✅ |
+
+| `OPENROUTER_API_KEY` | OpenRouter API key | - | ✅ |
+
+| `CLAUDE_MODEL` | Claude model via OpenRouter | `anthropic/claude-3.5-sonnet` | ❌ |
+
+| `RAILWAY_STATIC_URL` | Railway app URL | - | 🚀 Railway |# Advanced Python AsyncIO Patterns## 🏗️ Project Structure- **Advanced Categorization**: Confidence scoring and auto-review flagging
+
+| `KNOWLEDGE_BASE_PATH` | Storage directory | `/app/knowledge_base` | ❌ |
+
+| `USE_NOTION_STORAGE` | Enable Notion backup | `false` | ❌ |
+
+| `MAX_VIDEOS_PER_HOUR` | Rate limit per user | `10` | ❌ |
+
+| `TARGET_CONTENT_LENGTH` | Target word count | `2500` | ❌ |## Overview- **Multiple Storage Options**: Notion database, Obsidian books, or markdown files
+
+
+
+## 🤝 ContributingComprehensive guide to modern asynchronous programming in Python...
+
+
+
+1. **Fork** the repository```- **Cost Tracking**: Token usage monitoring and pricing analytics
+
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
+
+3. **Commit** changes: `git commit -m 'Add amazing feature'`## Key Concepts
+
+4. **Push** to branch: `git push origin feature/amazing-feature`
+
+5. **Submit** a Pull Request- Event loops and coroutinesKnowledge-Bot/
+
+
+
+## 📄 License- Error handling in async code
+
+
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.- Performance optimization techniques├── app.py                      # Main entry point### 🎨 **New: AI-Generated Technical Diagrams**
+
+
+
+## 🆘 Support
+
+
+
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/silvioiatech/Knowledge-Bot/issues)## Tools & Technologies├── config.py                   # Configuration management- **Gemini 2.5 Flash Image Preview** creates professional technical illustrations
+
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/silvioiatech/Knowledge-Bot/discussions)
+
+- **📧 Questions**: Check existing issues or start a new discussion- **Python AsyncIO**: Core async framework
+
+
+
+## 🌟 Acknowledgments- **aiohttp**: Async HTTP client/server├── requirements.txt            # Dependencies- Automatically detects diagram opportunities in content
+
+
+
+- **Google Gemini**: AI video analysis capabilities- **asyncpg**: Async PostgreSQL driver
+
+- **Anthropic Claude**: Content enrichment via OpenRouter
+
+- **Railway**: Reliable cloud deployment and persistent storage├── .env.example               # Environment template- Generates: flowcharts, system architectures, process diagrams, UI mockups
+
+- **aiogram**: Excellent Telegram bot framework
+
+## Practical Examples
+
+---
+
+[Code examples and implementation details...]├── bot/- Embedded directly into textbook-quality content with proper captions
+
+**Star ⭐ this repository if you find it useful!**
+
+
+## Additional Resources│   ├── main.py                # Bot initialization
+
+- [Official AsyncIO Documentation](https://docs.python.org/3/library/asyncio.html)
+
+- [Real Python AsyncIO Guide](https://realpython.com/async-io-python/)│   ├── middleware.py          # Rate limiting & logging### 📊 **Enhanced Analytics & Quality Control**
+
+```
+
+│   └── handlers/- **Category Confidence Scoring**: Auto-flags uncertain classifications for review
+
+### Railway Web Access
+
+- **Browse Categories**: `https://your-app.up.railway.app/kb/`│       └── video_handler.py   # Video processing workflow- **Content Quality Metrics**: Tracks comprehensive analysis depth (20+ fields)
+
+- **View Files**: `https://your-app.up.railway.app/view/programming/asyncio-patterns.md`
+
+- **Download Raw**: `https://your-app.up.railway.app/raw/programming/asyncio-patterns.md`├── services/- **Cost Analytics**: Real-time token usage and pricing with OpenRouter integration
+
+
+
+## 🚀 Railway Deployment│   ├── railway_client.py      # Video download service- **Dynamic Category Management**: Learns and adapts categorization over time
+
+
+
+### 1. **Setup Railway**│   ├── gemini_service.py      # AI video analysis
+
+```bash
+
+# Install Railway CLI│   ├── claude_service.py      # Content enrichment### 🔒 **Privacy & Control**
+
+npm install -g @railway/cli
+
+│   └── image_generation_service.py # Diagram generation- Interactive approval system - you control what gets saved
+
+# Login and deploy
+
+railway login├── storage/- Private repository integration for personal knowledge
+
+railway link
+
+railway add volume --name knowledge-base --mount /app/knowledge_base│   ├── markdown_storage.py    # Markdown file management- Rate limiting and user management
+
+railway deploy
+
+```│   └── notion_storage.py      # Notion database integration- Local or cloud storage options
+
+
+
+### 2. **Environment Variables**└── core/models/
+
+Set in Railway dashboard:
+
+```env    └── content_models.py      # Data models### 📱 **Multi-Platform Access**
+
+TELEGRAM_BOT_TOKEN=your_token
+
+GEMINI_API_KEY=your_key```- Works with any Markdown editor
+
+OPENROUTER_API_KEY=your_key
+
+RAILWAY_STATIC_URL=https://your-app.up.railway.app- Obsidian mobile app support
+
+PORT=8000
+
+```## 🎯 How It Works- GitHub integration for sync across devices
+
+
+
+### 3. **Access Your Knowledge Base**
+
+- **Web Browser**: `https://your-app.up.railway.app/kb/`
+
+- **File Viewer**: `https://your-app.up.railway.app/view/category/file.md`1. **Send Video URL** → Bot receives TikTok/Instagram video URL## 🏗️ Project Structure
+
+- **API Health**: `https://your-app.up.railway.app/health`
+
+2. **Download Video** → Railway service downloads the video file
+
+## 🔧 Supported Platforms
+
+3. **AI Analysis** → Gemini analyzes video content and extracts insights```
+
+| Platform | URL Format | Status |
+
+|----------|------------|--------|4. **Preview & Approval** → Interactive preview with approve/reject optionsKnowledge-Bot/
+
+| **TikTok** | `tiktok.com/@user/video/...` | ✅ Supported |
+
+| **Instagram** | `instagram.com/p/...` | ✅ Supported |5. **Content Generation** → Claude creates comprehensive educational content├── 📁 bot/
+
+| **Instagram Reels** | `instagram.com/reel/...` | ✅ Supported |
+
+6. **Save Results** → Store in Markdown files and/or Notion database│   ├── main.py              # aiogram bot initialization
+
+## 📱 Usage Workflow
+
+│   └── handlers/
+
+1. **Start Bot**: Send `/start` to initialize
+
+2. **Send URL**: Share a TikTok or Instagram video URL## 🔧 Supported Platforms│       └── video_handler.py # Video processing workflow
+
+3. **Processing**: Bot downloads and analyzes (progress updates shown)
+
+4. **Review**: Get analysis summary with quality score├── 📁 services/
+
+5. **Approve/Reject**: Use ✅ Approve, ❌ Reject, or 🔄 Re-analyze buttons
+
+6. **Access Content**: Get Railway URL for immediate web access- **TikTok**: `tiktok.com/@user/video/...`│   ├── railway_client.py           # Video download service  
+
+
+
+## 🚨 Troubleshooting- **Instagram**: `instagram.com/p/...` and `instagram.com/reel/...`│   ├── gemini_service.py           # Comprehensive AI video analysis
+
+
+
+### Common Issues│   ├── claude_service.py           # Textbook-quality content generation
+
+
+
+#### ❌ Gemini API Errors## 📊 Output Examples│   ├── image_generation_service.py # AI-powered technical diagrams
+
+```
+
+404 Model not found: projects/generativelanguage-ga/...│   └── git_sync.py                 # GitHub integration
+
+```
+
+**Solution**: Use correct model names### Markdown Files├── 📁 storage/
+
+```env
+
+GEMINI_MODEL=gemini-1.5-flash  # ✅ Correct```markdown│   ├── markdown_storage.py  # Simple markdown files
+
+GEMINI_MODEL=gemini-1.5-pro    # ✅ Correct
+
+```# Advanced Python AsyncIO Patterns│   ├── book_storage.py      # Obsidian book format
+
+
+
+#### ❌ OpenRouter API Errors│   └── notion_storage.py    # Notion database integration
+
+**Check**: 
+
+- API key is valid at [OpenRouter](https://openrouter.ai)## Overview├── ⚙️ config.py             # Configuration management
+
+- Account has sufficient credits
+
+- Model name is correct: `anthropic/claude-3.5-sonnet`Learn modern asynchronous programming patterns...├── 🚀 app.py               # Main application entry
+
+
+
+#### ❌ Video Download Failures└── 📖 PRIVATE_REPOSITORY_SETUP.md  # Setup guide
+
+**TikTok videos may fail initially** - this is normal behavior. The bot automatically retries failed downloads.
+
+## Key Concepts│   └── claude_service.py    # Claude content enrichment
+
+#### ❌ Memory Issues
+
+**Fixed in latest version**:- Event loops and coroutines├── storage/
+
+- Session TTL management (30-minute expiration)
+
+- Background cleanup tasks- Error handling in async code│   └── markdown_storage.py  # Markdown file management
+
+- Proper async processing
+
+- Performance optimization techniques├── config.py                # Configuration & environment
+
+## 🔒 Production Features
+
+├── run_bot.py              # Main entry point
+
+### Security & Reliability
+
+- ✅ **Rate Limiting**: 10 videos per user per hour## Tools & Technologies└── knowledge_base/          # Generated knowledge base
+
+- ✅ **Session Management**: TTL-based cleanup prevents memory leaks
+
+- ✅ **Retry Logic**: Exponential backoff for API failures- Python AsyncIO    ├── artificial-intelligence/
+
+- ✅ **Error Recovery**: Comprehensive error handling and user feedback
+
+- aiohttp    ├── development/
+
+### Quality Control
+
+- ✅ **Realistic Quality Scores**: Capped at 60-90% range- asyncpg    ├── design/
+
+- ✅ **Content Validation**: Interactive approval workflow
+
+- ✅ **Honest Features**: No fake capabilities or impossible metrics```    └── ...
+
+
+
+### Performance```
+
+- ✅ **Non-blocking Processing**: Multiple users can process simultaneously
+
+- ✅ **Service Singleton Pattern**: Efficient resource usage### Notion Database
+
+- ✅ **Persistent Storage**: Railway files survive deployments
+
+Automatically creates entries with:## 🚀 Quick Start
+
+## 📝 Configuration Reference
+
+- Title, Category, Tags
+
+| Variable | Description | Default | Required |
+
+|----------|-------------|---------|----------|- Content Quality Score### 1. Installation
+
+| `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | - | ✅ |
+
+| `GEMINI_API_KEY` | Google Gemini API key | - | ✅ |- Word Count, Processing Date
+
+| `OPENROUTER_API_KEY` | OpenRouter API key | - | ✅ |
+
+| `CLAUDE_MODEL` | Claude model via OpenRouter | `anthropic/claude-3.5-sonnet` | ❌ |- Key Points, Tools Used```bash
+
+| `RAILWAY_STATIC_URL` | Railway app URL | - | 🚀 Railway |
+
+| `KNOWLEDGE_BASE_PATH` | Storage directory | `/app/knowledge_base` | ❌ |- Source URL and Platform# Clone repository
+
+| `USE_NOTION_STORAGE` | Enable Notion backup | `false` | ❌ |
+
+| `MAX_VIDEOS_PER_HOUR` | Rate limit per user | `10` | ❌ |git clone https://github.com/silvioiatech/Knowledge-Bot.git
+
+| `TARGET_CONTENT_LENGTH` | Target word count | `2500` | ❌ |
+
+## 🚨 Troubleshootingcd Knowledge-Bot
+
+## 🤝 Contributing
+
+
+
+1. **Fork** the repository
+
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`### Common Issues# Install dependencies
+
+3. **Commit** changes: `git commit -m 'Add amazing feature'`
+
+4. **Push** to branch: `git push origin feature/amazing-feature`pip install -r requirements.txt
+
+5. **Submit** a Pull Request
+
+**❌ "Gemini API Error: Model not found"**```
+
+## 📄 License
+
+```env
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 # Use correct model name### 2. Configuration
+
+## 🆘 Support
 
 GEMINI_MODEL=gemini-1.5-flash
 
-``````bash
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/silvioiatech/Knowledge-Bot/issues)
+
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/silvioiatech/Knowledge-Bot/discussions)``````bash
+
+- **📧 Questions**: Check existing issues or start a new discussion
 
 # Copy environment template
 
+## 🌟 Acknowledgments
+
 **❌ "OpenRouter API Error"**cp .env.example .env
 
-- Check your API key at [OpenRouter](https://openrouter.ai)
+- **Google Gemini**: AI video analysis capabilities
 
-- Verify you have credits available# Edit .env with your API keys
+- **Anthropic Claude**: Content enrichment via OpenRouter- Check your API key at [OpenRouter](https://openrouter.ai)
 
-- Ensure model name is correct (e.g., `anthropic/claude-3.5-sonnet`)nano .env
+- **Railway**: Reliable cloud deployment and persistent storage
 
-```
+- **aiogram**: Excellent Telegram bot framework- Verify you have credits available# Edit .env with your API keys
+
+
+
+---- Ensure model name is correct (e.g., `anthropic/claude-3.5-sonnet`)nano .env
+
+
+
+**Star ⭐ this repository if you find it useful!**```
 
 **❌ "Railway Download Failed"**
 

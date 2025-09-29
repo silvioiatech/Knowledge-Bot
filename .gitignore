@@ -61,7 +61,6 @@ temp/
 
 # Private knowledge repositories (users' personal data)
 **/my-private-knowledge/
-**/ObsidianVault/
 private_repo*.env
 knowledge_base/
 

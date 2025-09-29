@@ -91,6 +91,10 @@ class KnowledgeBot:
         # Register video handlers
         register_video_handlers(self.dp)
         
+        # Import and start session cleanup
+        from bot.handlers.video_handler import start_session_cleanup
+        start_session_cleanup()
+        
         # Register start command
         self._register_start_handler()
         
