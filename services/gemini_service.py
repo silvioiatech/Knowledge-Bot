@@ -59,7 +59,7 @@ class EnhancedGeminiService:
             analysis = await self._analyze_video_content(video_path, video_url, platform)
             
             # Convert to GeminiAnalysis object
-            enhanced_analysis = await self._convert_to_gemini_analysis(analysis)
+            enhanced_analysis = await self._convert_to_gemini_analysis(analysis, video_url, platform)
             
             logger.success(f"Video analysis completed successfully")
             return enhanced_analysis
@@ -68,7 +68,7 @@ class EnhancedGeminiService:
             logger.error(f"Video analysis failed: {e}")
             raise GeminiAnalysisError(f"Video analysis failed: {e}")
     
-    async def _convert_to_gemini_analysis(self, analysis: Dict[str, Any]) -> GeminiAnalysis:
+    async def _convert_to_gemini_analysis(self, analysis: Dict[str, Any], video_url: str, platform: str) -> GeminiAnalysis:
         """Convert raw analysis to GeminiAnalysis object."""
         # Create proper GeminiAnalysis object from raw data
         from core.models.content_models import (
@@ -78,13 +78,14 @@ class EnhancedGeminiService:
         
         # Extract metadata
         video_metadata = VideoMetadata(
+            url=video_url,
+            platform=platform,
             title=analysis.get("video_metadata", {}).get("title", "Unknown Title"),
             author="Unknown",
             duration=analysis.get("video_metadata", {}).get("duration_seconds", 0),
-            upload_date=datetime.now(),
+            posted_date=datetime.now(),
             view_count=0,
-            like_count=0,
-            description=""
+            like_count=0
         )
         
         # Create transcript segments
