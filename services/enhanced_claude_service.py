@@ -4,7 +4,7 @@ Enhanced Claude service with intelligent image evaluation and Notion integration
 
 import json
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 import httpx
