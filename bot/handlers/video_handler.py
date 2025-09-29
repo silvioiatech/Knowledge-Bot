@@ -14,11 +14,12 @@ from loguru import logger
 
 from services.railway_client import RailwayClient
 from services.gemini_service import EnhancedGeminiService
-from services.claude_service import ClaudeService
-from services.image_generation_service import ImageGenerationService
+from services.enhanced_claude_service import EnhancedClaudeService
+from services.image_generation_service import SmartImageGenerationService
 from storage.markdown_storage import MarkdownStorage
-from storage.notion_storage import NotionStorage
-from storage.railway_storage import RailwayStorage
+from storage.notion_storage import EnhancedNotionStorageService
+from bot.interactive_category_system import InteractiveCategorySystem
+from core.models.content_models import NotionPayload
 from config import Config, ERROR_MESSAGES, SUPPORTED_PLATFORMS
 
 # Router for video handlers
@@ -82,12 +83,13 @@ def get_services():
     if railway_client is None:
         railway_client = RailwayClient()
         gemini_service = EnhancedGeminiService()
-        claude_service = ClaudeService()
-        image_service = ImageGenerationService()
+        claude_service = EnhancedClaudeService()
+        image_service = SmartImageGenerationService()
         markdown_storage = MarkdownStorage()
-        notion_storage = NotionStorage()
-        railway_storage = RailwayStorage()
-        logger.debug("Services initialized with singleton pattern")
+        notion_storage = EnhancedNotionStorageService()
+        # Note: RailwayStorage doesn't exist yet, using markdown for now
+        railway_storage = markdown_storage
+        logger.debug("Enhanced services initialized with singleton pattern")
     
     return (railway_client, gemini_service, claude_service, image_service,
             markdown_storage, notion_storage, railway_storage)
@@ -191,18 +193,33 @@ def create_preview_keyboard(analysis_id: str) -> InlineKeyboardMarkup:
 async def cmd_start(message: Message) -> None:
     """Handle /start command."""
     welcome_text = """
-🤖 **Knowledge Bot**
+🤖 **Enhanced Knowledge Bot**
 
-I analyze TikTok and Instagram videos to create comprehensive educational content for your knowledge base.
+I analyze TikTok and Instagram videos to create comprehensive educational content with smart AI optimization.
 
-**What I do:**
-1. 📥 **Download** your video
-2. 🧠 **Analyze** content with AI
-3. 📋 **Preview** technical summary for your approval
-4. ✨ **Generate** comprehensive educational content
-5. 💾 **Save** to your knowledge base
+**🎯 Enhanced Features:**
+1. 📥 **Smart Download** - Railway-powered video processing
+2. 🧠 **AI Analysis** - Gemini 1.5 Flash advanced content analysis  
+3. 🎨 **Conditional Image Generation** - Claude evaluates when visuals add value
+4. � **Interactive Categories** - Choose optimal knowledge organization
+5. 🗄️ **Notion Integration** - Exact database schema mapping
+6. ✨ **Educational Enhancement** - Claude transforms to learning material
 
-Just send me a TikTok or Instagram video URL to get started!
+**🔄 Intelligent Workflow:**
+• Claude analyzes content for category suggestions
+• Interactive selection with inline keyboards
+• Smart image generation only when beneficial
+• Comprehensive Notion database integration
+• Cost-optimized processing pipeline
+
+**💡 What makes this special:**
+• **Smart Cost Management** - Images generated only when necessary
+• **Exact Schema Mapping** - Perfect Notion database integration  
+• **Interactive Control** - You choose categories and content flow
+• **Educational Focus** - Content optimized for learning
+• **Quality Assurance** - Multi-AI validation and enhancement
+
+Just send me a TikTok or Instagram video URL to experience the enhanced workflow!
 
 **Supported platforms:** TikTok, Instagram Reels
 """
@@ -385,7 +402,7 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
 
 @router.callback_query(F.data.startswith("approve_"))
 async def handle_approval_callback(callback: CallbackQuery) -> None:
-    """Handle approval of video analysis."""
+    """Handle approval of video analysis with enhanced workflow."""
     analysis_id = callback.data.replace("approve_", "")
     user_id = callback.from_user.id
     
@@ -403,66 +420,161 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         return
     
     try:
-        # Update message to show processing
-        await callback.message.edit_text("✨ Generating comprehensive content...")
+        # Initialize interactive category system
+        category_system = InteractiveCategorySystem()
         
-        # Step 4: Claude content enrichment (no fake diagrams)
-        enriched_content = await claude_service_inst.enrich_content(session['analysis'])
+        # Step 1: Enhanced Claude analysis for category suggestions
+        await callback.message.edit_text("🤖 Analyzing content for optimal categorization...")
         
-        # Step 5: Save to Railway storage (primary) and Notion (backup)
-        await callback.message.edit_text("💾 Saving to knowledge base...")
-        
-        # Primary: Save to Railway persistent storage
-        railway_url = await railway_storage_inst.save_entry(
-            session['analysis'], 
-            enriched_content,
-            session['video_url']
+        category_suggestions = await claude_service_inst.analyze_content_for_categories(
+            session['analysis']
         )
-        storage_location = f"🔗 <a href='{railway_url}'>View on Railway</a>"
         
-        # Secondary: Try Notion as backup
-        try:
-            if Config.USE_NOTION_STORAGE and Config.NOTION_API_KEY:
-                notion_url = await notion_storage_inst.save_entry(
-                    session['analysis'], 
-                    enriched_content,
-                    session['video_url']
-                )
-                storage_location += f" | <a href='{notion_url}'>Notion Backup</a>"
-        except Exception as notion_error:
-            logger.warning(f"Notion backup failed (not critical): {notion_error}")
+        # Step 2: Show interactive category selection
+        selection_message, keyboard = category_system.create_category_selection_message(
+            category_suggestions
+        )
         
-        # Success message with Railway URL
-        success_message = f"""
-✅ <b>Knowledge Entry Created Successfully!</b>
-
-📊 <b>Final Metrics:</b>
-• Words Generated: ~{len(enriched_content.split()) if isinstance(enriched_content, str) else 'N/A'}
-• Processing Time: Complete
-• Storage: {storage_location}
-
-🎯 <b>Content Includes:</b>
-• Comprehensive analysis from Gemini
-• Educational content from Claude  
-• Web research validation
-• Technical concepts breakdown
-{'• AI-generated diagrams' if Config.ENABLE_IMAGE_GENERATION else ''}
-
-The knowledge has been added to your database!
-        """
+        # Store analysis in session for category selection
+        session['category_suggestions'] = category_suggestions
+        session['awaiting_category'] = True
         
         await callback.message.edit_text(
-            success_message,
-            parse_mode="HTML",
-            disable_web_page_preview=True
+            text=selection_message,
+            reply_markup=keyboard,
+            parse_mode="HTML"
         )
+        
+    except Exception as e:
+        logger.error(f"Enhanced processing failed for user {user_id}: {e}")
+        await callback.message.edit_text("❌ Processing failed. Please try again.")
+    
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("category_"))
+async def handle_category_selection(callback: CallbackQuery) -> None:
+    """Handle category selection and continue with enhanced processing."""
+    user_id = callback.from_user.id
+    
+    if user_id not in user_sessions:
+        await callback.answer("❌ Session expired. Please submit the video URL again.")
+        return
+    
+    session = user_sessions[user_id]
+    if not session.get('awaiting_category'):
+        await callback.answer("❌ Session expired. Please submit the video URL again.")
+        return
+    
+    session = user_sessions[user_id]
+    
+    try:
+        # Initialize services
+        (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+         markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
+        
+        category_system = InteractiveCategorySystem()
+        
+        # Handle category selection
+        selected_category = await category_system.handle_category_selection(
+            callback, session['category_suggestions']
+        )
+        
+        if not selected_category:
+            await callback.answer("❌ Invalid category selection.")
+            return
+        
+        session['selected_category'] = selected_category
+        session['awaiting_category'] = False
+        
+        # Step 3: Claude content enrichment with selected category
+        await callback.message.edit_text("✨ Generating enhanced educational content...")
+        
+        enhanced_content = await claude_service_inst.create_enhanced_content(
+            session['analysis'],
+            selected_category
+        )
+        
+        # Step 4: Smart conditional image generation
+        await callback.message.edit_text("🎨 Evaluating image generation necessity...")
+        
+        image_evaluation = await claude_service_inst.evaluate_image_necessity(
+            enhanced_content
+        )
+        
+        generated_images = []
+        if image_evaluation.should_generate:
+            await callback.message.edit_text("🎨 Generating AI images...")
+            generated_images = await image_service_inst.generate_conditional_images(
+                enhanced_content, image_evaluation
+            )
+        
+        # Step 5: Extract Notion metadata
+        await callback.message.edit_text("📊 Preparing database entry...")
+        
+        notion_metadata = await claude_service_inst.extract_notion_metadata(
+            session['analysis'], enhanced_content, selected_category
+        )
+        
+        # Create NotionPayload
+        notion_payload = NotionPayload(
+            title=notion_metadata.title,
+            category=selected_category,
+            subcategory=notion_metadata.subcategory,
+            content_quality=notion_metadata.content_quality,
+            difficulty=notion_metadata.difficulty,
+            word_count=len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0,
+            processing_date=datetime.now().isoformat(),
+            source_video=session['video_url'],
+            key_points=notion_metadata.key_points,
+            gemini_confidence=notion_metadata.gemini_confidence,
+            tags=notion_metadata.tags,
+            tools_mentioned=notion_metadata.tools_mentioned,
+            platform_specific=notion_metadata.platform_specific,
+            prerequisites=notion_metadata.prerequisites,
+            related=notion_metadata.related,
+            advanced_topics=notion_metadata.advanced_topics,
+            auto_created_category=True,
+            verified=False,
+            ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
+            ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
+        )
+        
+        # Add content blocks for Notion
+        if isinstance(enhanced_content, str):
+            notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(enhanced_content)
+        
+        # Step 6: Save to Notion database
+        await callback.message.edit_text("💾 Saving to knowledge base...")
+        
+        success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
+        
+        if success:
+            # Generate comprehensive result message
+            result_message = category_system.create_comprehensive_result_message(
+                notion_payload, enhanced_content, generated_images, notion_url
+            )
+            
+            await callback.message.edit_text(
+                text=result_message,
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
+        else:
+            await callback.message.edit_text(
+                "❌ Failed to save to Notion database. Please check configuration."
+            )
         
         # Clear user session
         del user_sessions[user_id]
         
     except Exception as e:
-        logger.error(f"Processing failed for user {user_id}: {e}")
+        logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
         await callback.message.edit_text("❌ Processing failed. Please try again.")
+        
+        # Clear session on error
+        if user_id in user_sessions:
+            del user_sessions[user_id]
     
     await callback.answer()
 

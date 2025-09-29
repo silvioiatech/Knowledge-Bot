@@ -238,6 +238,15 @@ class ImagePlan:
     priority: int = 1  # 1-5, higher is more important
 
 @dataclass
+class ImageEvaluationResult:
+    """Result of Claude's evaluation for image generation necessity."""
+    needs_images: bool
+    image_plans: List[ImagePlan] = field(default_factory=list)
+    reasoning: str = ""
+    content_type: str = ""  # "theoretical", "practical", "architectural", "tutorial"
+    complexity_score: int = 0  # 1-10
+
+@dataclass
 class ClaudeOutput:
     """Output from Claude textbook authoring."""
     markdown_content: str
@@ -262,16 +271,163 @@ class GeneratedImage:
     alt_text: str = ""
 
 @dataclass
+class NotionFieldMappings:
+    """Exact Notion database field mappings with validation."""
+    
+    # Category mappings (exact values from Notion)
+    CATEGORIES = {
+        "apple": "🍎 APPLE",
+        "linux": "🐧 LINUX", 
+        "ai": "🤖 AI",
+        "monetization": "💰 MONETIZATION",
+        "external_devices": "🔌 EXTERNAL_DEVICES",
+        "mobile_dev": "📱 MOBILE_DEV",
+        "cloud": "☁️ CLOUD",
+        "security": "🔒 SECURITY",
+        "productivity": "📈 PRODUCTIVITY"
+    }
+    
+    # Subcategory mappings
+    SUBCATEGORIES = [
+        "Programs", "Automations", "Agents", "System Config", 
+        "Development", "Hardware", "Networking", "Tools", 
+        "Workflow Automation"
+    ]
+    
+    # Content quality levels
+    QUALITY_LEVELS = [
+        "⭐ Raw",
+        "⭐⭐ Basic", 
+        "⭐⭐⭐ Good",
+        "⭐⭐⭐⭐ Excellent",
+        "⭐⭐⭐⭐⭐ Production Ready"
+    ]
+    
+    # Difficulty levels
+    DIFFICULTY_LEVELS = [
+        "Beginner", "Intermediate", "Advanced", "Expert", "🔴 Advanced"
+    ]
+    
+    # Platform specific options
+    PLATFORMS = [
+        "macOS", "Linux", "Windows", "iOS", "Android", "Universal"
+    ]
+    
+    @classmethod
+    def get_category_emoji_name(cls, key: str) -> str:
+        """Get full category name with emoji."""
+        return cls.CATEGORIES.get(key.lower(), "🤖 AI")
+    
+    @classmethod
+    def get_category_key(cls, emoji_name: str) -> str:
+        """Get category key from emoji name."""
+        for key, value in cls.CATEGORIES.items():
+            if value == emoji_name:
+                return key
+        return "ai"
+
+@dataclass
+class CategorySuggestion:
+    """Category suggestion from Gemini analysis."""
+    category: str  # Key (e.g., "ai")
+    category_display: str  # Display with emoji (e.g., "🤖 AI")
+    subcategory: str
+    confidence: float
+    reasoning: str
+    difficulty: str
+    platform_specific: List[str] = field(default_factory=list)
+
+@dataclass
 class NotionPayload:
-    """Final Notion API payload."""
-    properties: Dict[str, Any]
-    content_blocks: List[Dict[str, Any]]
+    """Final Notion API payload with exact field mappings."""
+    title: str
+    category: str  # From CATEGORIES
+    subcategory: str  # From SUBCATEGORIES  
+    content_quality: str = "⭐⭐ Basic"  # From QUALITY_LEVELS
+    difficulty: str = "Beginner"  # From DIFFICULTY_LEVELS
+    word_count: int = 0
+    processing_date: str = ""  # ISO format
+    source_video: str = ""
+    key_points: List[str] = field(default_factory=list)
+    gemini_confidence: int = 0  # 0-100
+    tags: List[str] = field(default_factory=list)
+    tools_mentioned: List[str] = field(default_factory=list)
+    platform_specific: List[str] = field(default_factory=list)
+    prerequisites: List[str] = field(default_factory=list)
+    related_topics: List[str] = field(default_factory=list)
+    advanced_topics: List[str] = field(default_factory=list)
+    auto_created: bool = True
+    verified: bool = False
+    ready_for_script: bool = False
+    ready_for_ebook: bool = False
+    content_blocks: List[Dict[str, Any]] = field(default_factory=list)
     
     def to_notion_request(self, database_id: str) -> Dict[str, Any]:
-        """Convert to Notion API request format."""
+        """Convert to Notion API request format with exact field mappings."""
         return {
             "parent": {"database_id": database_id},
-            "properties": self.properties,
+            "properties": {
+                "Title": {
+                    "title": [{"text": {"content": self.title}}]
+                },
+                "Category": {
+                    "select": {"name": self.category}
+                },
+                "Subcategory": {
+                    "select": {"name": self.subcategory}
+                },
+                "Content Quality": {
+                    "select": {"name": self.content_quality}
+                },
+                "Difficulty": {
+                    "select": {"name": self.difficulty}
+                },
+                "Word Count": {
+                    "number": self.word_count
+                },
+                "Processing Date": {
+                    "date": {"start": self.processing_date}
+                },
+                "Source Video": {
+                    "url": self.source_video
+                },
+                "Key Points": {
+                    "rich_text": [{"text": {"content": "\n".join([f"• {point}" for point in self.key_points])}}]
+                },
+                "Gemini Confidence": {
+                    "number": self.gemini_confidence
+                },
+                "Tags": {
+                    "multi_select": [{"name": tag} for tag in self.tags]
+                },
+                "Tools Mentioned": {
+                    "multi_select": [{"name": tool} for tool in self.tools_mentioned]
+                },
+                "Platform Specific": {
+                    "multi_select": [{"name": platform} for platform in self.platform_specific]
+                },
+                "Prerequisites": {
+                    "multi_select": [{"name": prereq} for prereq in self.prerequisites]
+                },
+                "Related": {
+                    "multi_select": [{"name": topic} for topic in self.related_topics]
+                },
+                "Advanced Topics": {
+                    "multi_select": [{"name": topic} for topic in self.advanced_topics]
+                },
+                "Auto-Created Category": {
+                    "checkbox": self.auto_created
+                },
+                "Verified": {
+                    "checkbox": self.verified
+                },
+                "Ready for Script": {
+                    "checkbox": self.ready_for_script
+                },
+                "Ready for eBook": {
+                    "checkbox": self.ready_for_ebook
+                }
+            },
             "children": self.content_blocks
         }
 
