@@ -1,9 +1,7 @@
 """Video processing handlers with web research and confirmation preview."""
 
-import asyncio
 import re
 from typing import Dict, Any
-from urllib.parse import urlparse
 
 from aiogram import Router, F
 from aiogram.types import (
@@ -19,7 +17,6 @@ from services.image_generation_service import ImageGenerationService
 from storage.markdown_storage import MarkdownStorage
 from storage.notion_storage import NotionStorage
 from config import Config, ERROR_MESSAGES, PROGRESS_MESSAGES, SUPPORTED_PLATFORMS
-from core.pipeline import KnowledgeBotPipeline
 
 # Router for video handlers
 router = Router()
@@ -71,13 +68,12 @@ def _determine_content_category(analysis) -> str:
         return "📚 General Tech"
 markdown_storage = None
 notion_storage = None
-pipeline = None
 
 
 def get_services():
     """Initialize services lazily."""
     global railway_client, gemini_service, claude_service, image_service
-    global markdown_storage, notion_storage, pipeline
+    global markdown_storage, notion_storage
     
     if railway_client is None:
         railway_client = RailwayClient()
@@ -86,11 +82,10 @@ def get_services():
         image_service = ImageGenerationService()
         markdown_storage = MarkdownStorage()
         notion_storage = NotionStorage()
-        pipeline = KnowledgeBotPipeline()
         logger.debug("Services initialized lazily")
     
     return (railway_client, gemini_service, claude_service, image_service,
-            markdown_storage, notion_storage, pipeline)
+            markdown_storage, notion_storage)
 
 # User sessions to track processing state
 user_sessions: Dict[int, Dict[str, Any]] = {}
@@ -160,7 +155,7 @@ async def process_video_url(message: Message) -> None:
     
     # Initialize services
     (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-     markdown_storage_inst, notion_storage_inst, pipeline_inst) = get_services()
+     markdown_storage_inst, notion_storage_inst) = get_services()
     
     # Validate URL
     platform = is_supported_video_url(url)
@@ -304,7 +299,7 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
     
     # Initialize services
     (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-     markdown_storage_inst, notion_storage_inst, pipeline_inst) = get_services()
+     markdown_storage_inst, notion_storage_inst) = get_services()
     
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
@@ -414,7 +409,7 @@ async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
     
     # Initialize services
     (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-     markdown_storage_inst, notion_storage_inst, pipeline_inst) = get_services()
+     markdown_storage_inst, notion_storage_inst) = get_services()
     
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
