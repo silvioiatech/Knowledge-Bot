@@ -432,17 +432,18 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         
         # Step 2: Show interactive category selection
         selection_message, keyboard = category_system.create_category_selection_message(
-            category_suggestions
+            category_suggestions, user_id
         )
         
         # Store analysis in session for category selection
         session['category_suggestions'] = category_suggestions
         session['awaiting_category'] = True
+        session['message'] = callback.message  # Store message for later updates
         
         await callback.message.edit_text(
             text=selection_message,
             reply_markup=keyboard,
-            parse_mode="HTML"
+            parse_mode="Markdown"
         )
         
     except Exception as e:
@@ -452,10 +453,13 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("category_"))
-async def handle_category_selection(callback: CallbackQuery) -> None:
-    """Handle category selection and continue with enhanced processing."""
+# Category selection callbacks - handle both cat: and sub: prefixes
+@router.callback_query(F.data.startswith("cat:"))
+@router.callback_query(F.data.startswith("sub:"))
+async def handle_category_callbacks(callback: CallbackQuery) -> None:
+    """Handle interactive category selection callbacks."""
     user_id = callback.from_user.id
+    callback_data = callback.data
     
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
@@ -463,10 +467,40 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
     
     session = user_sessions[user_id]
     if not session.get('awaiting_category'):
-        await callback.answer("❌ Session expired. Please submit the video URL again.")
+        await callback.answer("❌ Invalid session state.")
         return
     
-    session = user_sessions[user_id]
+    try:
+        category_system = InteractiveCategorySystem()
+        
+        # Handle the callback and get response
+        message_text, keyboard, is_final = await category_system.handle_category_selection(
+            user_id, callback_data
+        )
+        
+        # Update the message
+        await callback.message.edit_text(
+            text=message_text,
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
+        
+        # If this is the final selection, continue with processing
+        if is_final:
+            await continue_enhanced_processing(user_id)
+        
+    except Exception as e:
+        logger.error(f"Category callback handling failed for user {user_id}: {e}")
+        await callback.message.edit_text("❌ Selection failed. Please try again.")
+    
+    await callback.answer()
+
+
+async def continue_enhanced_processing(user_id: int):
+    """Continue with enhanced processing after category selection."""
+    session = user_sessions.get(user_id)
+    if not session:
+        return
     
     try:
         # Initialize services
@@ -475,108 +509,222 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
         
         category_system = InteractiveCategorySystem()
         
-        # Handle category selection
-        selected_category = await category_system.handle_category_selection(
-            callback, session['category_suggestions']
-        )
-        
-        if not selected_category:
-            await callback.answer("❌ Invalid category selection.")
+        # Get final category selection
+        final_selection = category_system.get_final_selection(user_id)
+        if not final_selection:
+            logger.error(f"No final selection found for user {user_id}")
             return
         
-        session['selected_category'] = selected_category
-        session['awaiting_category'] = False
+        # Get the message object from the session
+        message = session.get('message')  # We'll need to store this
         
-        # Step 3: Claude content enrichment with selected category
-        await callback.message.edit_text("✨ Generating enhanced educational content...")
+        # Step 1: Claude content enrichment with selected category
+        await session['message'].edit_text("✨ Generating enhanced educational content...")
         
         enhanced_content = await claude_service_inst.create_enhanced_content(
             session['analysis'],
-            selected_category
+            final_selection
         )
         
-        # Step 4: Smart conditional image generation
-        await callback.message.edit_text("🎨 Evaluating image generation necessity...")
+        # Step 2: Smart conditional image generation evaluation
+        await session['message'].edit_text("🎨 Evaluating image generation necessity...")
         
         image_evaluation = await claude_service_inst.evaluate_image_necessity(
-            enhanced_content
+            session['analysis'],
+            final_selection
         )
         
+        # Generate images if needed
         generated_images = []
-        if image_evaluation.should_generate:
-            await callback.message.edit_text("🎨 Generating AI images...")
+        if image_evaluation.needs_images:
+            await session['message'].edit_text(f"🎨 Generating {len(image_evaluation.image_plans)} AI diagrams...")
             generated_images = await image_service_inst.generate_conditional_images(
-                enhanced_content, image_evaluation
+                image_evaluation, enhanced_content or "Enhanced content"
             )
+            logger.info(f"Generated {len(generated_images)} images for user {user_id}")
+        else:
+            logger.info(f"Skipped image generation for user {user_id}: {image_evaluation.reasoning}")
         
-        # Step 5: Extract Notion metadata
-        await callback.message.edit_text("📊 Preparing database entry...")
+        # Step 3: Extract comprehensive Notion metadata
+        await session['message'].edit_text("📊 Preparing database entry...")
         
-        notion_metadata = await claude_service_inst.extract_notion_metadata(
-            session['analysis'], enhanced_content, selected_category
+        notion_payload = await claude_service_inst.extract_notion_metadata(
+            enhanced_content or "Enhanced content",
+            session['analysis'], 
+            final_selection
         )
         
-        # Create NotionPayload
-        notion_payload = NotionPayload(
-            title=notion_metadata.title,
-            category=selected_category,
-            subcategory=notion_metadata.subcategory,
-            content_quality=notion_metadata.content_quality,
-            difficulty=notion_metadata.difficulty,
-            word_count=len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0,
-            processing_date=datetime.now().isoformat(),
-            source_video=session['video_url'],
-            key_points=notion_metadata.key_points,
-            gemini_confidence=notion_metadata.gemini_confidence,
-            tags=notion_metadata.tags,
-            tools_mentioned=notion_metadata.tools_mentioned,
-            platform_specific=notion_metadata.platform_specific,
-            prerequisites=notion_metadata.prerequisites,
-            related=notion_metadata.related,
-            advanced_topics=notion_metadata.advanced_topics,
-            auto_created_category=True,
-            verified=False,
-            ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
-            ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
+        # Step 4: Save to Railway storage (local markdown)
+        await session['message'].edit_text("💾 Saving to knowledge base...")
+        
+        # Generate Railway URL
+        railway_url = await save_to_railway_storage(
+            enhanced_content, notion_payload, generated_images
         )
         
-        # Add content blocks for Notion
-        if isinstance(enhanced_content, str):
-            notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(enhanced_content)
-        
-        # Step 6: Save to Notion database
-        await callback.message.edit_text("💾 Saving to knowledge base...")
-        
+        # Step 5: Save to Notion database
         success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
         
         if success:
-            # Generate comprehensive result message
-            result_message = category_system.create_comprehensive_result_message(
-                notion_payload, enhanced_content, generated_images, notion_url
+            # Generate comprehensive result message with all links
+            result_message = category_system.create_processing_result_message(
+                notion_payload, railway_url, notion_url
             )
             
-            await callback.message.edit_text(
+            await session['message'].edit_text(
                 text=result_message,
-                parse_mode="HTML",
+                parse_mode="Markdown",
                 disable_web_page_preview=True
             )
+            
+            logger.info(f"Successfully completed enhanced processing for user {user_id}")
         else:
-            await callback.message.edit_text(
-                "❌ Failed to save to Notion database. Please check configuration."
-            )
+            await session['message'].edit_text(
+                "❌ Failed to save to Notion database. Content saved locally.")
         
         # Clear user session
-        del user_sessions[user_id]
+        category_system.clear_selection(user_id)
+        if user_id in user_sessions:
+            del user_sessions[user_id]
         
     except Exception as e:
-        logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
-        await callback.message.edit_text("❌ Processing failed. Please try again.")
+        logger.error(f"Enhanced processing failed for user {user_id}: {e}")
+        if session and 'message' in session:
+            await session['message'].edit_text("❌ Processing failed. Please try again.")
         
         # Clear session on error
         if user_id in user_sessions:
             del user_sessions[user_id]
+
+
+async def save_to_railway_storage(content: str, notion_payload: NotionPayload, 
+                                 generated_images: list) -> str:
+    """Save content to Railway storage and return web URL."""
+    try:
+        # Generate filename based on title and date
+        from pathlib import Path
+        import re
+        
+        # Clean title for filename
+        safe_title = re.sub(r'[^\w\s-]', '', notion_payload.title)
+        safe_title = re.sub(r'[-\s]+', '-', safe_title).strip('-').lower()
+        date_str = datetime.now().strftime('%Y%m%d')
+        
+        # Determine category folder (lowercase, no emoji)
+        category_key = notion_payload.category.lower().replace('🤖 ', '').replace(' ', '-')
+        category_map = {
+            'ai': 'ai',
+            'apple': 'apple', 
+            'linux': 'linux',
+            'monetization': 'monetization',
+            'external_devices': 'external-devices',
+            'mobile_dev': 'mobile-dev',
+            'cloud': 'cloud',
+            'security': 'security',
+            'productivity': 'productivity'
+        }
+        
+        category_folder = 'general'
+        for key, folder in category_map.items():
+            if key in category_key:
+                category_folder = folder
+                break
+        
+        filename = f"{date_str}-{safe_title[:40]}.md"
+        
+        # Create knowledge base directory structure
+        kb_path = Path(Config.KNOWLEDGE_BASE_PATH)
+        category_path = kb_path / category_folder
+        category_path.mkdir(parents=True, exist_ok=True)
+        
+        file_path = category_path / filename
+        
+        # Create enhanced markdown content with frontmatter
+        markdown_content = create_enhanced_markdown(
+            content, notion_payload, generated_images
+        )
+        
+        # Save file
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        
+        # Generate Railway URL
+        base_url = Config.RAILWAY_STATIC_URL or "https://your-app.up.railway.app"
+        railway_url = f"{base_url}/view/{category_folder}/{filename}"
+        
+        logger.info(f"Saved content to Railway storage: {file_path}")
+        return railway_url
+        
+    except Exception as e:
+        logger.error(f"Failed to save to Railway storage: {e}")
+        return ""
+
+
+def create_enhanced_markdown(content: str, notion_payload: NotionPayload, 
+                           generated_images: list) -> str:
+    """Create enhanced markdown with frontmatter and metadata."""
+    # Create YAML frontmatter
+    frontmatter = f"""---
+title: "{notion_payload.title}"
+category: "{notion_payload.category}"
+subcategory: "{notion_payload.subcategory}"
+difficulty: "{notion_payload.difficulty}"
+content_quality: "{notion_payload.content_quality}"
+word_count: {notion_payload.word_count}
+processing_date: "{notion_payload.processing_date}"
+source_video: "{notion_payload.source_video}"
+gemini_confidence: {notion_payload.gemini_confidence}
+tags: {notion_payload.tags}
+tools_mentioned: {notion_payload.tools_mentioned}
+platform_specific: {notion_payload.platform_specific}
+auto_created: {notion_payload.auto_created}
+verified: {notion_payload.verified}
+---
+
+"""
     
-    await callback.answer()
+    # Add content summary
+    summary = f"""# {notion_payload.title}
+
+> **📊 Content Overview**  
+> **Category:** {notion_payload.category} → {notion_payload.subcategory}  
+> **Difficulty:** {notion_payload.difficulty} | **Quality:** {notion_payload.content_quality}  
+> **Word Count:** {notion_payload.word_count:,} words | **Confidence:** {notion_payload.gemini_confidence}%
+
+"""
+    
+    # Add key points if available
+    if notion_payload.key_points:
+        summary += "## 🔑 Key Learning Points\n\n"
+        for i, point in enumerate(notion_payload.key_points, 1):
+            summary += f"{i}. {point}\n"
+        summary += "\n"
+    
+    # Add tools and tags
+    if notion_payload.tools_mentioned:
+        summary += f"**🛠️ Tools Mentioned:** {', '.join(notion_payload.tools_mentioned)}\n\n"
+    
+    if notion_payload.tags:
+        summary += f"**🏷️ Tags:** {', '.join([f'#{tag}' for tag in notion_payload.tags])}\n\n"
+    
+    # Add divider
+    summary += "---\n\n"
+    
+    # Combine everything
+    full_content = frontmatter + summary + content
+    
+    # Add generated images section if any
+    if generated_images:
+        full_content += "\n\n## 📊 Generated Diagrams\n\n"
+        for i, img in enumerate(generated_images, 1):
+            if hasattr(img, 'image_plan'):
+                full_content += f"### {img.image_plan.description}\n\n"
+                if img.image_url:
+                    full_content += f"![{img.alt_text}]({img.image_url})\n\n"
+                else:
+                    full_content += f"*{img.alt_text}*\n\n"
+    
+    return full_content
 
 
 @router.callback_query(F.data.startswith("reject_"))

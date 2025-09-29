@@ -24,6 +24,7 @@ class Config:
     # Railway Download Service
     RAILWAY_API_URL: str = os.getenv("RAILWAY_API_URL", "https://railway-yt-dlp-service-production.up.railway.app")
     RAILWAY_API_KEY: str = os.getenv("RAILWAY_API_KEY", "")
+    RAILWAY_STATIC_URL: str = os.getenv("RAILWAY_STATIC_URL", "https://your-app.up.railway.app")
     
     # AI Services Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
@@ -152,6 +153,7 @@ CATEGORY_MAPPINGS = {
 TELEGRAM_BOT_TOKEN = Config.TELEGRAM_BOT_TOKEN
 RAILWAY_API_URL = Config.RAILWAY_API_URL
 RAILWAY_API_KEY = Config.RAILWAY_API_KEY
+RAILWAY_STATIC_URL = Config.RAILWAY_STATIC_URL
 GEMINI_API_KEY = Config.GEMINI_API_KEY
 GEMINI_MODEL = Config.GEMINI_MODEL
 OPENROUTER_API_KEY = Config.OPENROUTER_API_KEY

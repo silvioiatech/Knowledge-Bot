@@ -257,7 +257,7 @@ class EnhancedClaudeService:
     
     async def create_enhanced_content(self, gemini_analysis: GeminiAnalysis, 
                                     category_suggestion: CategorySuggestion,
-                                    image_evaluation: ImageEvaluationResult) -> str:
+                                    image_evaluation: Optional[ImageEvaluationResult] = None) -> str:
         """
         Create comprehensive educational content optimized for the selected category.
         """
@@ -278,7 +278,7 @@ class EnhancedClaudeService:
             
             # Image placeholders for content structure
             image_placeholders = ""
-            if image_evaluation.needs_images:
+            if image_evaluation and image_evaluation.needs_images:
                 for i, plan in enumerate(image_evaluation.image_plans):
                     image_placeholders += f"\n[IMAGE_{i+1}: {plan.description} - Section: {plan.placement_section}]"
             
@@ -302,7 +302,7 @@ class EnhancedClaudeService:
             {transcript_text}
             
             IMAGE INTEGRATION:
-            {image_placeholders if image_evaluation.needs_images else "[No images planned - focus on clear textual explanations]"}
+            {image_placeholders if image_evaluation and image_evaluation.needs_images else "[No images planned - focus on clear textual explanations]"}
             
             Create a comprehensive {Config.TARGET_CONTENT_LENGTH}-word educational article with:
             
