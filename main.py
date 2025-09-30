@@ -11,7 +11,6 @@ from pathlib import Path
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import LinkPreviewOptions
 from loguru import logger
 
 # Add project root to Python path
@@ -60,8 +59,7 @@ async def setup_bot() -> tuple[Bot, Dispatcher]:
     bot = Bot(
         token=Config.TELEGRAM_BOT_TOKEN,
         default=DefaultBotProperties(
-            parse_mode=ParseMode.MARKDOWN,
-            link_preview_options=LinkPreviewOptions(is_disabled=True)
+            parse_mode=ParseMode.MARKDOWN
         )
     )
     
