@@ -526,20 +526,25 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                     platform_specific=[]
                 )
             
-            enhanced_content = await claude_service_inst.create_enhanced_content(
-                session['analysis'],
-                category_for_claude
-            )
-            
-            # Step 4: Smart conditional image generation
+            # Step 3: Smart conditional image evaluation  
             await callback.message.edit_text("🎨 Evaluating image generation necessity...")
             
             image_evaluation = await claude_service_inst.evaluate_image_necessity(
                 session['analysis'], category_for_claude
             )
             
+            # Step 4: Claude content enrichment with selected category and image evaluation
+            await callback.message.edit_text("✨ Generating enhanced educational content...")
+            
+            enhanced_content = await claude_service_inst.create_enhanced_content(
+                session['analysis'],
+                category_for_claude,
+                image_evaluation
+            )
+            
+            # Step 5: Generate images if needed
             generated_images = []
-            if image_evaluation.should_generate:
+            if image_evaluation.needs_images:
                 await callback.message.edit_text("🎨 Generating AI images...")
                 generated_images = await image_service_inst.generate_conditional_images(
                     enhanced_content, image_evaluation
@@ -568,9 +573,9 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                 tools_mentioned=notion_metadata.tools_mentioned,
                 platform_specific=notion_metadata.platform_specific,
                 prerequisites=notion_metadata.prerequisites,
-                related=notion_metadata.related,
+                related_topics=notion_metadata.related,
                 advanced_topics=notion_metadata.advanced_topics,
-                auto_created_category=True,
+                auto_created=True,
                 verified=False,
                 ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
                 ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
