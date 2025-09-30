@@ -602,22 +602,4 @@ For more information on this topic, refer to the original video source and relat
                     ]
                 }
             }
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
-
-    async def close(self):
-        """Close HTTP client and cleanup resources."""
-        if hasattr(self, 'http_client') and self.http_client:
-            try:
-                await self.http_client.aclose()
-                logger.debug(f"{self.__class__.__name__} HTTP client closed")
-            except Exception as e:
-                logger.warning(f"Error closing HTTP client: {e}")
-
         ]

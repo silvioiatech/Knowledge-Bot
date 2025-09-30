@@ -382,12 +382,12 @@ Respond in JSON format with realistic scores (0-100 range) and specific content 
         # Enhanced quality scores with research validation
         quality_raw = initial_analysis.get("quality_assessment", {})
         quality_scores = QualityScores(
-            content_accuracy = min(100, max(0, quality_raw.get("technical_accuracy_confidence")), 0.6) * 100,
-            technical_depth = min(100, max(0, quality_raw.get("technical_accuracy_confidence")), 0.6) * 100,
-            educational_value = min(100, max(0, quality_raw.get("educational_value")), 0.8) * 100,
-            source_credibility = min(100, max(0, len(research_results))) / max(len(research_queries), 1) * 100,  # Research coverage
-            completeness = min(100, max(0, quality_raw.get("completeness")), 0.7) * 100,
-            overall = min(100, max(0, quality_raw.get("overall_quality")), 0.7) * 100
+            content_accuracy=quality_raw.get("technical_accuracy_confidence", 0.6) * 100,
+            technical_depth=quality_raw.get("technical_accuracy_confidence", 0.6) * 100,
+            educational_value=quality_raw.get("educational_value", 0.8) * 100,
+            source_credibility=len(research_results) / max(len(research_queries), 1) * 100,  # Research coverage
+            completeness=quality_raw.get("completeness", 0.7) * 100,
+            overall=quality_raw.get("overall_quality", 0.7) * 100
         )
         
         # Convert research results to WebResearchFact objects

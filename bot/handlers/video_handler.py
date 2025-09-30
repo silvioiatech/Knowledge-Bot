@@ -593,29 +593,6 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
         category_system.clear_selection(user_id)
     
     await callback.answer()
-            
-            await callback.message.edit_text(
-                text=result_message,
-                parse_mode="HTML",
-                disable_web_page_preview=True
-            )
-        else:
-            await callback.message.edit_text(
-                "❌ Failed to save to Notion database. Please check configuration."
-            )
-        
-        # Clear user session
-        del user_sessions[user_id]
-        
-    except Exception as e:
-        logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
-        await callback.message.edit_text("❌ Processing failed. Please try again.")
-        
-        # Clear session on error
-        if user_id in user_sessions:
-            del user_sessions[user_id]
-    
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("reject_"))
