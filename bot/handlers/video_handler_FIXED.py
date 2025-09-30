@@ -1,4 +1,4 @@
-"""Video processing handlers with web research and confirmation preview."""
+"""Video processing handlers with web research and confirmation preview - FIXED VERSION."""
 
 import re
 import asyncio
@@ -26,73 +26,26 @@ from config import Config, ERROR_MESSAGES, SUPPORTED_PLATFORMS
 router = Router()
 
 # Service instances - initialized lazily
-railway_client = None
-gemini_service = None
-claude_service = None
-image_service = None
-
-
-def _determine_content_category(analysis) -> str:
-    """Determine content category from analysis."""
-    main_topic = analysis.content_outline.main_topic.lower()
-    entities = [entity.name.lower() for entity in analysis.entities]
-    
-    # Category mapping based on content
-    if any(term in main_topic or any(term in entity for entity in entities) 
-           for term in ["ai", "machine learning", "llm", "neural", "gpt", "claude"]):
-        return "🤖 AI"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["web", "javascript", "react", "vue", "html", "css"]):
-        return "🌐 Web Development"  
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["python", "java", "golang", "rust", "programming"]):
-        return "💻 Programming"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["devops", "docker", "kubernetes", "cloud", "aws"]):
-        return "⚙️ DevOps"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["mobile", "ios", "android", "react native", "flutter"]):
-        return "📱 Mobile"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["security", "cybersecurity", "encryption", "authentication"]):
-        return "🛡️ Security"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["data science", "analytics", "database", "sql", "big data"]):
-        return "📊 Data"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["mac", "macos", "osx", "macbook", "apple", "xcode", "homebrew"]):
-        return "🍎 macOS"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["linux", "ubuntu", "debian", "fedora", "arch", "centos", "unix", "bash", "terminal"]):
-        return "🐧 Linux"
-    elif any(term in main_topic or any(term in entity for entity in entities)
-            for term in ["windows", "microsoft", "powershell", "cmd", "wsl", "visual studio"]):
-        return "🪟 Windows"
-    else:
-        return "📚 General Tech"
-markdown_storage = None
-notion_storage = None
-railway_storage = None
+_services = None
 
 
 def get_services():
     """Initialize services lazily with singleton pattern."""
-    global railway_client, gemini_service, claude_service, image_service
-    global markdown_storage, notion_storage, railway_storage
+    global _services
     
-    if railway_client is None:
-        railway_client = RailwayClient()
-        gemini_service = EnhancedGeminiService()
-        claude_service = EnhancedClaudeService()
-        image_service = SmartImageGenerationService()
-        markdown_storage = MarkdownStorage()
-        notion_storage = EnhancedNotionStorageService()
-        # Note: RailwayStorage doesn't exist yet, using markdown for now
-        railway_storage = markdown_storage
+    if _services is None:
+        _services = {
+            'railway_client': RailwayClient(),
+            'gemini_service': EnhancedGeminiService(),
+            'claude_service': EnhancedClaudeService(),
+            'image_service': SmartImageGenerationService(),
+            'markdown_storage': MarkdownStorage(),
+            'notion_storage': EnhancedNotionStorageService()
+        }
         logger.debug("Enhanced services initialized with singleton pattern")
     
-    return (railway_client, gemini_service, claude_service, image_service,
-            markdown_storage, notion_storage, railway_storage)
+    return _services
+
 
 # User sessions to track processing state with TTL
 user_sessions: Dict[int, Dict[str, Any]] = {}
@@ -189,6 +142,46 @@ def create_preview_keyboard(analysis_id: str) -> InlineKeyboardMarkup:
     )
 
 
+def _determine_content_category(analysis) -> str:
+    """Determine content category from analysis."""
+    main_topic = analysis.content_outline.main_topic.lower()
+    entities = [entity.name.lower() for entity in analysis.entities]
+    
+    # Category mapping based on content
+    if any(term in main_topic or any(term in entity for entity in entities) 
+           for term in ["ai", "machine learning", "llm", "neural", "gpt", "claude"]):
+        return "🤖 AI"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["web", "javascript", "react", "vue", "html", "css"]):
+        return "🌐 Web Development"  
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["python", "java", "golang", "rust", "programming"]):
+        return "💻 Programming"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["devops", "docker", "kubernetes", "cloud", "aws"]):
+        return "⚙️ DevOps"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["mobile", "ios", "android", "react native", "flutter"]):
+        return "📱 Mobile"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["security", "cybersecurity", "encryption", "authentication"]):
+        return "🛡️ Security"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["data science", "analytics", "database", "sql", "big data"]):
+        return "📊 Data"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["mac", "macos", "osx", "macbook", "apple", "xcode", "homebrew"]):
+        return "🍎 macOS"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["linux", "ubuntu", "debian", "fedora", "arch", "centos", "unix", "bash", "terminal"]):
+        return "🐧 Linux"
+    elif any(term in main_topic or any(term in entity for entity in entities)
+            for term in ["windows", "microsoft", "powershell", "cmd", "wsl", "visual studio"]):
+        return "🪟 Windows"
+    else:
+        return "📚 General Tech"
+
+
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
     """Handle /start command."""
@@ -199,9 +192,9 @@ I analyze TikTok and Instagram videos to create comprehensive educational conten
 
 **🎯 Enhanced Features:**
 1. 📥 **Smart Download** - Railway-powered video processing
-2. 🧠 **AI Analysis** - Gemini 1.5 Flash advanced content analysis  
+2. 🧠 **AI Analysis** - Gemini advanced content analysis  
 3. 🎨 **Conditional Image Generation** - Claude evaluates when visuals add value
-4. � **Interactive Categories** - Choose optimal knowledge organization
+4. 📂 **Interactive Categories** - Choose optimal knowledge organization
 5. 🗄️ **Notion Integration** - Exact database schema mapping
 6. ✨ **Educational Enhancement** - Claude transforms to learning material
 
@@ -211,13 +204,6 @@ I analyze TikTok and Instagram videos to create comprehensive educational conten
 • Smart image generation only when beneficial
 • Comprehensive Notion database integration
 • Cost-optimized processing pipeline
-
-**💡 What makes this special:**
-• **Smart Cost Management** - Images generated only when necessary
-• **Exact Schema Mapping** - Perfect Notion database integration  
-• **Interactive Control** - You choose categories and content flow
-• **Educational Focus** - Content optimized for learning
-• **Quality Assurance** - Multi-AI validation and enhancement
 
 Just send me a TikTok or Instagram video URL to experience the enhanced workflow!
 
@@ -272,20 +258,17 @@ async def process_video_url(message: Message) -> None:
 async def process_video_task(user_id: int, url: str, platform: str, status_msg) -> None:
     """Non-blocking video processing task."""
     session = get_or_create_session(user_id)
+    services = get_services()
     
     try:
-        # Initialize services
-        (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-         markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
-        
-        # Step 1: Download video with retry
+        # Step 1: Download video
         await status_msg.edit_text("🎬 **Video Processing**\n\n📥 Downloading video...")
-        video_path = await railway_client_inst.download_video(url)
+        video_path = await services['railway_client'].download_video(url)
         logger.info(f"Video downloaded successfully: {video_path}")
         
-        # Step 2: Analyze with Gemini (no fake research)
+        # Step 2: Analyze with Gemini
         await status_msg.edit_text("🎬 **Video Processing**\n\n🤖 Analyzing content with AI...")
-        analysis = await gemini_service_inst.analyze_video_with_research(
+        analysis = await services['gemini_service'].analyze_video_with_research(
             video_path=video_path,
             video_url=url,
             platform=platform
@@ -341,7 +324,7 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
     
     # Key concepts and tools
     key_concepts = [entity.name for entity in analysis.entities if entity.type in ['concept', 'technology']][:6]
-    tools_mentioned = [entity.name for entity in analysis.entities if entity.type == 'technology'][:5]
+    tools_mentioned = [entity.name for entity in analysis.entities if entity.type == 'technology']][:5]
     
     # Quality metrics (realistic 0-100 scaling)
     confidence = min(85, max(60, int(analysis.quality_scores.overall)))
@@ -381,10 +364,6 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
 {chr(10).join([f"• {tool}" for tool in tools_mentioned[:3]]) if tools_mentioned else "• General technical concepts"}
 {f"<i>... and {len(tools_mentioned)-3} more tools</i>" if len(tools_mentioned) > 3 else ""}
 
-🔍 <b>Analysis Quality:</b>
-• <b>Research queries:</b> Analysis completed without external research
-• <b>Quality assurance:</b> ✅ AI-verified content structure
-
 📊 <b>Quality Metrics:</b>
 • <b>Overall Quality:</b> {confidence}% | <b>Completeness:</b> {completeness}%
 • <b>Technical Depth:</b> {technical_depth}% | <b>Educational Value:</b> {educational_value}%
@@ -393,12 +372,10 @@ async def _generate_technical_preview(analysis, video_url: str) -> str:
 • <b>Content Length:</b> ~{estimated_words:,} words ({estimated_read_time} min read)
 • <b>Structure:</b> {estimated_sections} detailed sections with examples
 • <b>Format:</b> Professional markdown with examples
-• <b>Storage:</b> {"Notion database + Markdown files" if Config.USE_NOTION_STORAGE else "Markdown knowledge base"}
 
 <b>✅ Ready for content generation and knowledge base storage?</b>"""
     
     return preview.strip()
-
 
 
 @router.callback_query(F.data.startswith("approve_"))
@@ -406,10 +383,7 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
     """Handle approval of video analysis with complete enhanced workflow."""
     analysis_id = callback.data.replace("approve_", "")
     user_id = callback.from_user.id
-    
-    # Initialize services
-    (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-     markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
+    services = get_services()
     
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
@@ -427,7 +401,7 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         # Step 1: Enhanced Claude analysis for category suggestions
         await callback.message.edit_text("🤖 Analyzing content for optimal categorization...")
         
-        category_suggestions = await claude_service_inst.analyze_content_for_categories(
+        category_suggestions = await services['claude_service'].analyze_content_for_categories(
             session['analysis']
         )
         
@@ -457,6 +431,7 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
 async def handle_category_selection(callback: CallbackQuery) -> None:
     """Handle category selection and continue with enhanced processing."""
     user_id = callback.from_user.id
+    services = get_services()
     
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
@@ -468,10 +443,6 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
         return
     
     try:
-        # Initialize services
-        (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-         markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
-        
         category_system = InteractiveCategorySystem()
         
         # Handle category selection
@@ -487,101 +458,75 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                 parse_mode="HTML"
             )
         else:
-            # Final selection made - get the selected category and continue processing
+            # Final selection made - continue processing
             final_selection = category_system.get_final_selection(user_id)
             if not final_selection:
                 await callback.answer("❌ Failed to get category selection.")
                 return
             
-            selected_category = final_selection.category
+            selected_category = final_selection.category_display
             session['selected_category'] = selected_category
             session['awaiting_category'] = False
             
             # Show processing message
             await callback.message.edit_text(message_text, parse_mode="HTML")
             
-            # Step 3: Claude content enrichment with selected category
+            # Step 3: Claude content enrichment
             await callback.message.edit_text("✨ Generating enhanced educational content...")
             
-            enhanced_content = await claude_service_inst.create_enhanced_content(
+            enhanced_content = await services['claude_service'].create_enhanced_content(
                 session['analysis'],
-                selected_category
+                session['category_suggestions']
             )
             
             # Step 4: Smart conditional image generation
             await callback.message.edit_text("🎨 Evaluating image generation necessity...")
             
-            image_evaluation = await claude_service_inst.evaluate_image_necessity(
-                enhanced_content
+            image_evaluation = await services['claude_service'].evaluate_image_necessity(
+                session['analysis'],
+                session['category_suggestions']
             )
             
             generated_images = []
-            if image_evaluation.should_generate:
+            if image_evaluation.needs_images:
                 await callback.message.edit_text("🎨 Generating AI images...")
-                generated_images = await image_service_inst.generate_conditional_images(
+                generated_images = await services['image_service'].generate_conditional_images(
                     enhanced_content, image_evaluation
                 )
             
             # Step 5: Extract Notion metadata
             await callback.message.edit_text("📊 Preparing database entry...")
             
-            notion_metadata = await claude_service_inst.extract_notion_metadata(
-                session['analysis'], enhanced_content, selected_category
-            )
-        
-        # Create NotionPayload
-        notion_payload = NotionPayload(
-            title=notion_metadata.title,
-            category=selected_category,
-            subcategory=notion_metadata.subcategory,
-            content_quality=notion_metadata.content_quality,
-            difficulty=notion_metadata.difficulty,
-            word_count=len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0,
-            processing_date=datetime.now().isoformat(),
-            source_video=session['video_url'],
-            key_points=notion_metadata.key_points,
-            gemini_confidence=notion_metadata.gemini_confidence,
-            tags=notion_metadata.tags,
-            tools_mentioned=notion_metadata.tools_mentioned,
-            platform_specific=notion_metadata.platform_specific,
-            prerequisites=notion_metadata.prerequisites,
-            related=notion_metadata.related,
-            advanced_topics=notion_metadata.advanced_topics,
-            auto_created_category=True,
-            verified=False,
-            ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
-            ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
-        )
-        
-        # Add content blocks for Notion
-        if isinstance(enhanced_content, str):
-            notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(enhanced_content)
-        
-        # Step 6: Save to Notion database
-        await callback.message.edit_text("💾 Saving to knowledge base...")
-        
-        success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
-        
-        if success:
-            # Generate comprehensive result message  
-            result_message = category_system.create_processing_result_message(
-                notion_payload, railway_url="", notion_url=notion_url
+            notion_metadata = await services['claude_service'].extract_notion_metadata(
+                enhanced_content,
+                session['analysis'],
+                session['category_suggestions']
             )
             
-            await callback.message.edit_text(
-                text=result_message,
-                parse_mode="HTML",
-                disable_web_page_preview=True
-            )
-        else:
-            await callback.message.edit_text(
-                "❌ Failed to save to Notion database. Please check configuration."
-            )
-        
-        # Clear user session and category selection
-        category_system.clear_selection(user_id)
-        if user_id in user_sessions:
-            del user_sessions[user_id]
+            # Step 6: Save to Notion
+            await callback.message.edit_text("💾 Saving to knowledge base...")
+            
+            success, notion_url = await services['notion_storage'].save_enhanced_entry(notion_metadata)
+            
+            if success:
+                result_message = category_system.create_processing_result_message(
+                    notion_metadata, railway_url="", notion_url=notion_url
+                )
+                
+                await callback.message.edit_text(
+                    text=result_message,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
+                )
+            else:
+                await callback.message.edit_text(
+                    "❌ Failed to save to Notion database. Please check configuration."
+                )
+            
+            # Clear session
+            category_system.clear_selection(user_id)
+            if user_id in user_sessions:
+                del user_sessions[user_id]
             
     except Exception as e:
         logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
@@ -590,30 +535,9 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
         # Clear session on error
         if user_id in user_sessions:
             del user_sessions[user_id]
+        
+        category_system = InteractiveCategorySystem()
         category_system.clear_selection(user_id)
-    
-    await callback.answer()
-            
-            await callback.message.edit_text(
-                text=result_message,
-                parse_mode="HTML",
-                disable_web_page_preview=True
-            )
-        else:
-            await callback.message.edit_text(
-                "❌ Failed to save to Notion database. Please check configuration."
-            )
-        
-        # Clear user session
-        del user_sessions[user_id]
-        
-    except Exception as e:
-        logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
-        await callback.message.edit_text("❌ Processing failed. Please try again.")
-        
-        # Clear session on error
-        if user_id in user_sessions:
-            del user_sessions[user_id]
     
     await callback.answer()
 
@@ -639,10 +563,7 @@ async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
     """Handle request to re-analyze with different focus."""
     analysis_id = callback.data.replace("reanalyze_", "")
     user_id = callback.from_user.id
-    
-    # Initialize services
-    (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
-     markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
+    services = get_services()
     
     if user_id not in user_sessions:
         await callback.answer("❌ Session expired. Please submit the video URL again.")
@@ -654,11 +575,11 @@ async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
         await callback.message.edit_text("🔄 Re-analyzing with enhanced focus...")
         
         # Re-run analysis with different parameters
-        analysis = await gemini_service_inst.analyze_video_with_research(
+        analysis = await services['gemini_service'].analyze_video_with_research(
             video_path=None,  # Use cached if available
             video_url=session['video_url'],
             platform=session['platform'],
-            enhanced_focus=True  # Different analysis approach
+            enhanced_focus=True
         )
         
         # Generate new preview
