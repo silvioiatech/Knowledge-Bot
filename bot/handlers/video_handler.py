@@ -549,7 +549,7 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             await callback.message.edit_text("📊 Preparing database entry...")
             
             notion_metadata = await claude_service_inst.extract_notion_metadata(
-                session['analysis'], enhanced_content, selected_category
+                enhanced_content, session['analysis'], category_for_claude
             )
             
             # Create NotionPayload
