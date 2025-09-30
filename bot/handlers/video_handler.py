@@ -15,6 +15,7 @@ from loguru import logger
 from services.railway_client import RailwayClient
 from services.gemini_service import EnhancedGeminiService
 from services.enhanced_claude_service import EnhancedClaudeService
+from services.gpt_service import GPTContentPolisher
 from services.image_generation_service import SmartImageGenerationService
 from storage.markdown_storage import MarkdownStorage
 from storage.notion_storage import EnhancedNotionStorageService
@@ -29,6 +30,7 @@ router = Router()
 railway_client = None
 gemini_service = None
 claude_service = None
+gpt_service = None
 image_service = None
 markdown_storage = None
 notion_storage = None
@@ -80,13 +82,14 @@ def _determine_content_category(analysis) -> str:
 
 def get_services():
     """Initialize services lazily with singleton pattern."""
-    global railway_client, gemini_service, claude_service, image_service
+    global railway_client, gemini_service, claude_service, gpt_service, image_service
     global markdown_storage, notion_storage, railway_storage
     
     if railway_client is None:
         railway_client = RailwayClient()
         gemini_service = EnhancedGeminiService()
         claude_service = EnhancedClaudeService()
+        gpt_service = GPTContentPolisher()
         image_service = SmartImageGenerationService()
         markdown_storage = MarkdownStorage()
         notion_storage = EnhancedNotionStorageService()
@@ -94,7 +97,7 @@ def get_services():
         railway_storage = markdown_storage
         logger.debug("Enhanced services initialized with singleton pattern")
     
-    return (railway_client, gemini_service, claude_service, image_service,
+    return (railway_client, gemini_service, claude_service, gpt_service, image_service,
             markdown_storage, notion_storage, railway_storage)
 
 # User sessions to track processing state with TTL
@@ -278,7 +281,7 @@ async def process_video_task(user_id: int, url: str, platform: str, status_msg) 
     
     try:
         # Initialize services
-        (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+        (railway_client_inst, gemini_service_inst, claude_service_inst, gpt_service_inst, image_service_inst,
          markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
         
         # Step 1: Download video with retry
@@ -424,6 +427,10 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         return
     
     try:
+        # Initialize services
+        (railway_client_inst, gemini_service_inst, claude_service_inst, gpt_service_inst, image_service_inst,
+         markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
+        
         # Step 1: Enhanced Claude analysis for category suggestions
         await callback.message.edit_text("🤖 Analyzing content for optimal categorization...")
         
@@ -469,7 +476,7 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
     
     try:
         # Initialize services
-        (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+        (railway_client_inst, gemini_service_inst, claude_service_inst, gpt_service_inst, image_service_inst,
          markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
         
         # Handle category selection
@@ -534,7 +541,7 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             )
             
             # Step 4: Claude content enrichment with selected category and image evaluation
-            await callback.message.edit_text("✨ Generating enhanced educational content...")
+            await callback.message.edit_text("✨ Claude: Architecting educational content...")
             
             enhanced_content = await claude_service_inst.create_enhanced_content(
                 session['analysis'],
@@ -542,24 +549,41 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                 image_evaluation
             )
             
+            # Step 4.5: GPT polishing for clean Notion output
+            await callback.message.edit_text("🎯 GPT: Polishing content for professional output...")
+            
+            polished_content = await gpt_service_inst.polish_content_for_notion(
+                enhanced_content,
+                title=session['analysis'].video_metadata.title or "Technical Video Analysis",
+                category=selected_category,
+                source_url=session['video_url']
+            )
+            
             # Step 5: Generate images if needed
-            generated_images = []
+            _ = []  # generated_images placeholder
             if image_evaluation.needs_images:
                 await callback.message.edit_text("🎨 Generating AI images...")
-                generated_images = await image_service_inst.generate_conditional_images(
-                    enhanced_content, image_evaluation
+                _ = await image_service_inst.generate_conditional_images(
+                    polished_content, image_evaluation
                 )
             
-            # Step 5: Extract Notion metadata
-            await callback.message.edit_text("📊 Preparing database entry...")
+            # Step 6: Save to Markdown storage (Knowledge Base Volume)
+            await callback.message.edit_text("📁 Saving to Knowledge Base volume...")
+            
+            markdown_relative_path = await markdown_storage_inst.save_entry(
+                session['analysis'], polished_content, session['video_url']
+            )
+            
+            # Step 7: Extract Notion metadata using polished content
+            await callback.message.edit_text("📊 Preparing Notion database entry...")
             
             notion_payload = await claude_service_inst.extract_notion_metadata(
-                enhanced_content, session['analysis'], category_for_claude
+                polished_content, session['analysis'], category_for_claude
             )
             
             # Update fields from handler context
             notion_payload.category = selected_category
-            notion_payload.word_count = len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0
+            notion_payload.word_count = len(polished_content.split()) if isinstance(polished_content, str) else 0
             notion_payload.processing_date = datetime.now().isoformat()
             notion_payload.source_video = session['video_url']
             notion_payload.auto_created = True
@@ -567,19 +591,22 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             notion_payload.ready_for_script = notion_payload.content_quality in ["📚 High Quality", "🌟 Premium"]
             notion_payload.ready_for_ebook = notion_payload.content_quality == "🌟 Premium"
             
-            # Add content blocks for Notion
-            if isinstance(enhanced_content, str):
-                notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(enhanced_content)
+            # Add content blocks for Notion using polished content
+            if isinstance(polished_content, str):
+                notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(polished_content)
             
-            # Step 6: Save to Notion database
-            await callback.message.edit_text("💾 Saving to knowledge base...")
+            # Step 8: Save to Notion database
+            await callback.message.edit_text("💾 Saving to Notion database...")
             
             success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
             
+            # Create knowledge base URL (Railway volume mount)
+            knowledge_base_url = f"https://knowledge-bot.railway.app/knowledge_base/{markdown_relative_path}"
+            
             if success:
-                # Generate comprehensive result message  
+                # Generate comprehensive result message with both URLs
                 result_message = category_system.create_processing_result_message(
-                    notion_payload, railway_url="", notion_url=notion_url
+                    notion_payload, railway_url=knowledge_base_url, notion_url=notion_url
                 )
                 
                 await callback.message.edit_text(
@@ -588,7 +615,10 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                 )
             else:
                 await callback.message.edit_text(
-                    "❌ Failed to save to Notion database. Please check configuration."
+                    f"⚠️ **Partial Success**\n\n"
+                    f"✅ **Knowledge Base**: {knowledge_base_url}\n"
+                    f"❌ **Notion**: Failed to save to database\n\n"
+                    f"Content saved to knowledge base volume. Please check Notion configuration."
                 )
             
             # Clear user session and category selection
@@ -635,7 +665,7 @@ async def handle_reanalyze_callback(callback: CallbackQuery) -> None:
     user_id = callback.from_user.id
     
     # Initialize services
-    (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
+    (railway_client_inst, gemini_service_inst, claude_service_inst, gpt_service_inst, image_service_inst,
      markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
     
     if user_id not in user_sessions:

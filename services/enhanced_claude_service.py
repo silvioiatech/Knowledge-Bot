@@ -70,7 +70,7 @@ class EnhancedClaudeService:
             macOS, Linux, Windows, iOS, Android, Universal
             
             Respond with JSON only:
-            {{
+            {
                 "category": "category_key",
                 "category_display": "🤖 AI",
                 "subcategory": "exact_subcategory_name",
@@ -78,7 +78,7 @@ class EnhancedClaudeService:
                 "reasoning": "Brief explanation for the categorization",
                 "difficulty": "Intermediate",
                 "platform_specific": ["macOS", "Universal"]
-            }}
+            }
             
             Choose the single most appropriate category with high confidence. Consider the main topic and technical complexity.
             """
@@ -182,21 +182,21 @@ class EnhancedClaudeService:
             - Opinion pieces or reviews
             
             Respond with JSON only:
-            {{
-                "needs_images": true/false,
+            {
+                "needs_images": true,
                 "reasoning": "Specific explanation for decision",
-                "content_type": "practical|theoretical|architectural|tutorial",
+                "content_type": "practical",
                 "complexity_score": 7,
                 "image_plans": [
-                    {{
+                    {
                         "image_type": "flowchart",
                         "description": "System workflow diagram",
                         "placement_section": "Implementation",
                         "prompt": "Detailed prompt for image generation",
                         "priority": 3
-                    }}
+                    }
                 ]
-            }}
+            }
             
             Only suggest images if they would genuinely enhance understanding. Prioritize cost efficiency.
             """

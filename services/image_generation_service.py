@@ -73,11 +73,9 @@ class SmartImageGenerationService:
                         image_path = await self._save_image(image_data, plan.description)
                         
                         generated_image = GeneratedImage(
-                            title=plan.description,
-                            description=plan.description,
-                            file_path=str(image_path),
-                            prompt=enhanced_prompt,
-                            type=plan.image_type
+                            image_plan=plan,
+                            image_url=str(image_path),
+                            alt_text=plan.description
                         )
                         
                         generated_images.append(generated_image)
