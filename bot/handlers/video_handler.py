@@ -491,6 +491,12 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                 await callback.answer("❌ Failed to get category selection.")
                 return
             
+            # Ensure we have a CategorySelection object
+            if not hasattr(final_selection, 'category'):
+                logger.error(f"final_selection is not a CategorySelection object: {type(final_selection)}, value: {final_selection}")
+                await callback.answer("❌ Invalid category selection format.")
+                return
+            
             selected_category = final_selection.category
             session['selected_category'] = selected_category
             session['awaiting_category'] = False
@@ -582,6 +588,10 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             
     except Exception as e:
         logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
+        logger.error(f"Exception type: {type(e)}")
+        logger.error(f"Exception args: {e.args}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         await callback.message.edit_text("❌ Processing failed. Please try again.")
         
         # Clear session on error
