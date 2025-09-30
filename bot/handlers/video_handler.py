@@ -507,9 +507,28 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             # Step 3: Claude content enrichment with selected category
             await callback.message.edit_text("✨ Generating enhanced educational content...")
             
+            # Create a category suggestion object from the user's selection
+            # We need the original suggestions to get the full CategorySuggestion object
+            original_suggestions = session.get('category_suggestions')
+            if original_suggestions and hasattr(original_suggestions, 'category') and original_suggestions.category == selected_category:
+                # Use original suggestions with updated category if it matches
+                category_for_claude = original_suggestions
+            else:
+                # Create a simplified CategorySuggestion-like object for Claude
+                from core.models.content_models import CategorySuggestion
+                category_for_claude = CategorySuggestion(
+                    category=selected_category,
+                    category_display=final_selection.category_display,
+                    subcategory=final_selection.subcategory,
+                    confidence=80.0,
+                    reasoning=f"User selected category: {final_selection.category_display}",
+                    difficulty="Intermediate",
+                    platform_specific=[]
+                )
+            
             enhanced_content = await claude_service_inst.create_enhanced_content(
                 session['analysis'],
-                selected_category
+                category_for_claude
             )
             
             # Step 4: Smart conditional image generation
