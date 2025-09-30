@@ -528,59 +528,59 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             notion_metadata = await claude_service_inst.extract_notion_metadata(
                 session['analysis'], enhanced_content, selected_category
             )
-        
-        # Create NotionPayload
-        notion_payload = NotionPayload(
-            title=notion_metadata.title,
-            category=selected_category,
-            subcategory=notion_metadata.subcategory,
-            content_quality=notion_metadata.content_quality,
-            difficulty=notion_metadata.difficulty,
-            word_count=len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0,
-            processing_date=datetime.now().isoformat(),
-            source_video=session['video_url'],
-            key_points=notion_metadata.key_points,
-            gemini_confidence=notion_metadata.gemini_confidence,
-            tags=notion_metadata.tags,
-            tools_mentioned=notion_metadata.tools_mentioned,
-            platform_specific=notion_metadata.platform_specific,
-            prerequisites=notion_metadata.prerequisites,
-            related=notion_metadata.related,
-            advanced_topics=notion_metadata.advanced_topics,
-            auto_created_category=True,
-            verified=False,
-            ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
-            ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
-        )
-        
-        # Add content blocks for Notion
-        if isinstance(enhanced_content, str):
-            notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(enhanced_content)
-        
-        # Step 6: Save to Notion database
-        await callback.message.edit_text("💾 Saving to knowledge base...")
-        
-        success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
-        
-        if success:
-            # Generate comprehensive result message  
-            result_message = category_system.create_processing_result_message(
-                notion_payload, railway_url="", notion_url=notion_url
+            
+            # Create NotionPayload
+            notion_payload = NotionPayload(
+                title=notion_metadata.title,
+                category=selected_category,
+                subcategory=notion_metadata.subcategory,
+                content_quality=notion_metadata.content_quality,
+                difficulty=notion_metadata.difficulty,
+                word_count=len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0,
+                processing_date=datetime.now().isoformat(),
+                source_video=session['video_url'],
+                key_points=notion_metadata.key_points,
+                gemini_confidence=notion_metadata.gemini_confidence,
+                tags=notion_metadata.tags,
+                tools_mentioned=notion_metadata.tools_mentioned,
+                platform_specific=notion_metadata.platform_specific,
+                prerequisites=notion_metadata.prerequisites,
+                related=notion_metadata.related,
+                advanced_topics=notion_metadata.advanced_topics,
+                auto_created_category=True,
+                verified=False,
+                ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
+                ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
             )
             
-            await callback.message.edit_text(
-                text=result_message,
-                parse_mode="HTML"
-            )
-        else:
-            await callback.message.edit_text(
-                "❌ Failed to save to Notion database. Please check configuration."
-            )
-        
-        # Clear user session and category selection
-        category_system.clear_selection(user_id)
-        if user_id in user_sessions:
-            del user_sessions[user_id]
+            # Add content blocks for Notion
+            if isinstance(enhanced_content, str):
+                notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(enhanced_content)
+            
+            # Step 6: Save to Notion database
+            await callback.message.edit_text("💾 Saving to knowledge base...")
+            
+            success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
+            
+            if success:
+                # Generate comprehensive result message  
+                result_message = category_system.create_processing_result_message(
+                    notion_payload, railway_url="", notion_url=notion_url
+                )
+                
+                await callback.message.edit_text(
+                    text=result_message,
+                    parse_mode="HTML"
+                )
+            else:
+                await callback.message.edit_text(
+                    "❌ Failed to save to Notion database. Please check configuration."
+                )
+            
+            # Clear user session and category selection
+            category_system.clear_selection(user_id)
+            if user_id in user_sessions:
+                del user_sessions[user_id]
             
     except Exception as e:
         logger.error(f"Enhanced category processing failed for user {user_id}: {e}")
