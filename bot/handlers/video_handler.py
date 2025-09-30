@@ -30,6 +30,12 @@ railway_client = None
 gemini_service = None
 claude_service = None
 image_service = None
+markdown_storage = None
+notion_storage = None
+railway_storage = None
+
+# Global category system instance - persistent across handlers
+category_system = InteractiveCategorySystem()
 
 
 def _determine_content_category(analysis) -> str:
@@ -70,9 +76,6 @@ def _determine_content_category(analysis) -> str:
         return "🪟 Windows"
     else:
         return "📚 General Tech"
-markdown_storage = None
-notion_storage = None
-railway_storage = None
 
 
 def get_services():
@@ -421,9 +424,6 @@ async def handle_approval_callback(callback: CallbackQuery) -> None:
         return
     
     try:
-        # Initialize interactive category system
-        category_system = InteractiveCategorySystem()
-        
         # Step 1: Enhanced Claude analysis for category suggestions
         await callback.message.edit_text("🤖 Analyzing content for optimal categorization...")
         
@@ -471,8 +471,6 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
         # Initialize services
         (railway_client_inst, gemini_service_inst, claude_service_inst, image_service_inst,
          markdown_storage_inst, notion_storage_inst, railway_storage_inst) = get_services()
-        
-        category_system = InteractiveCategorySystem()
         
         # Handle category selection
         message_text, keyboard, is_final = await category_system.handle_category_selection(
