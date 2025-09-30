@@ -15,7 +15,7 @@ from loguru import logger
 from services.railway_client import RailwayClient
 from services.gemini_service import EnhancedGeminiService
 from services.enhanced_claude_service import EnhancedClaudeService
-from services.gpt_service import GPTContentPolisher
+from services.gpt_service import GPTFinalizerService
 from services.image_generation_service import SmartImageGenerationService
 from storage.markdown_storage import MarkdownStorage
 from storage.notion_storage import EnhancedNotionStorageService
@@ -89,7 +89,7 @@ def get_services():
         railway_client = RailwayClient()
         gemini_service = EnhancedGeminiService()
         claude_service = EnhancedClaudeService()
-        gpt_service = GPTContentPolisher()
+        gpt_service = GPTFinalizerService()
         image_service = SmartImageGenerationService()
         markdown_storage = MarkdownStorage()
         notion_storage = EnhancedNotionStorageService()
@@ -549,41 +549,46 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
                 image_evaluation
             )
             
-            # Step 4.5: GPT polishing for clean Notion output
-            await callback.message.edit_text("🎯 GPT: Polishing content for professional output...")
-            
-            polished_content = await gpt_service_inst.polish_content_for_notion(
-                enhanced_content,
-                title=session['analysis'].video_metadata.title or "Technical Video Analysis",
-                category=selected_category,
-                source_url=session['video_url']
-            )
+            # Step 4.5: GPT finalization to course/KB format
+            if Config.USE_GPT_FINALIZER:
+                await callback.message.edit_text("� GPT: Finalizing as course/knowledge base...")
+                final_content = await gpt_service_inst.finalize_to_course_format(
+                    enhanced_content, session['analysis']
+                )
+            else:
+                final_content = enhanced_content
             
             # Step 5: Generate images if needed
             _ = []  # generated_images placeholder
             if image_evaluation.needs_images:
                 await callback.message.edit_text("🎨 Generating AI images...")
                 _ = await image_service_inst.generate_conditional_images(
-                    polished_content, image_evaluation
+                    final_content, image_evaluation
                 )
             
-            # Step 6: Save to Markdown storage (Knowledge Base Volume)
-            await callback.message.edit_text("📁 Saving to Knowledge Base volume...")
+            # Step 6: Save to Markdown storage (Railway served)
+            await callback.message.edit_text("📁 Saving to Knowledge Base...")
             
-            markdown_relative_path = await markdown_storage_inst.save_entry(
-                session['analysis'], polished_content, session['video_url']
+            path_rel = await markdown_storage_inst.save_entry(
+                session['analysis'], final_content, session['video_url']
             )
             
-            # Step 7: Extract Notion metadata using polished content
-            await callback.message.edit_text("📊 Preparing Notion database entry...")
+            # Generate Railway static URL
+            if Config.RAILWAY_STATIC_URL:
+                railway_url = f"{Config.RAILWAY_STATIC_URL.rstrip('/')}/knowledge_base/{path_rel}"
+            else:
+                railway_url = f"/knowledge_base/{path_rel}"
+            
+            # Step 7: Save to Notion database  
+            await callback.message.edit_text("� Saving to Notion database...")
             
             notion_payload = await claude_service_inst.extract_notion_metadata(
-                polished_content, session['analysis'], category_for_claude
+                final_content, session['analysis'], category_for_claude
             )
             
             # Update fields from handler context
             notion_payload.category = selected_category
-            notion_payload.word_count = len(polished_content.split()) if isinstance(polished_content, str) else 0
+            notion_payload.word_count = len(final_content.split()) if isinstance(final_content, str) else 0
             notion_payload.processing_date = datetime.now().isoformat()
             notion_payload.source_video = session['video_url']
             notion_payload.auto_created = True
@@ -591,22 +596,19 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             notion_payload.ready_for_script = notion_payload.content_quality in ["📚 High Quality", "🌟 Premium"]
             notion_payload.ready_for_ebook = notion_payload.content_quality == "🌟 Premium"
             
-            # Add content blocks for Notion using polished content
-            if isinstance(polished_content, str):
-                notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(polished_content)
+            # Add content blocks for Notion using final content
+            if isinstance(final_content, str):
+                notion_payload.content_blocks = notion_storage_inst.create_notion_content_blocks(final_content)
             
             # Step 8: Save to Notion database
             await callback.message.edit_text("💾 Saving to Notion database...")
             
             success, notion_url = await notion_storage_inst.save_enhanced_entry(notion_payload)
             
-            # Create knowledge base URL (Railway volume mount)
-            knowledge_base_url = f"https://knowledge-bot.railway.app/knowledge_base/{markdown_relative_path}"
-            
             if success:
                 # Generate comprehensive result message with both URLs
                 result_message = category_system.create_processing_result_message(
-                    notion_payload, railway_url=knowledge_base_url, notion_url=notion_url
+                    notion_payload, railway_url=railway_url, notion_url=notion_url
                 )
                 
                 await callback.message.edit_text(
@@ -616,9 +618,9 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             else:
                 await callback.message.edit_text(
                     f"⚠️ **Partial Success**\n\n"
-                    f"✅ **Knowledge Base**: {knowledge_base_url}\n"
+                    f"✅ **Knowledge Base**: {railway_url}\n"
                     f"❌ **Notion**: Failed to save to database\n\n"
-                    f"Content saved to knowledge base volume. Please check Notion configuration."
+                    f"Content saved to knowledge base. Please check Notion configuration."
                 )
             
             # Clear user session and category selection

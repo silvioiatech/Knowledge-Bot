@@ -51,17 +51,25 @@ class EnhancedGeminiService:
         platform: str,
         enhanced_focus: bool = False
     ) -> GeminiAnalysis:
-        """Analyze video content (web research removed for stability)."""
+        """Analyze video content with optional web research."""
         logger.info(f"Starting video analysis for: {video_path}")
         
         try:
-            # Perform comprehensive video analysis without web research
+            # Perform comprehensive video analysis
             analysis = await self._analyze_video_content(video_path, video_url, platform)
             
-            # Convert to GeminiAnalysis object
-            enhanced_analysis = await self._convert_to_gemini_analysis(analysis, video_url, platform)
+            # Web research enhancement if enabled
+            if Config.ENABLE_WEB_RESEARCH:
+                logger.info("Conducting web research enhancement...")
+                queries = self._generate_research_queries(analysis, enhanced_focus)
+                research = await self._conduct_web_research(queries)
+                enhanced_analysis = await self._enhance_analysis_with_research(analysis, research, queries)
+                return enhanced_analysis
+            else:
+                # Convert to GeminiAnalysis object without research
+                enhanced_analysis = await self._convert_to_gemini_analysis(analysis, video_url, platform)
             
-            logger.success(f"Video analysis completed successfully")
+            logger.success("Video analysis completed successfully")
             return enhanced_analysis
             
         except Exception as e:

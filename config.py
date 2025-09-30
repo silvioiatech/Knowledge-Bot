@@ -19,6 +19,11 @@ class Config:
     
     # Core Bot Configuration
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    
+    # Feature Flags
+    ENABLE_WEB_RESEARCH: bool = os.getenv("ENABLE_WEB_RESEARCH", "true").lower() == "true"
+    USE_GPT_FINALIZER: bool = os.getenv("USE_GPT_FINALIZER", "true").lower() == "true"
+    ENABLE_IMAGE_GENERATION: bool = os.getenv("ENABLE_IMAGE_GENERATION", "false").lower() == "true"
     ADMIN_CHAT_ID: str = os.getenv("ADMIN_CHAT_ID", "")
     
     # Railway Download Service
@@ -56,10 +61,10 @@ class Config:
     # File Storage Configuration  
     TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "/tmp/knowledge_bot"))
     KNOWLEDGE_BASE_PATH: Path = Path(os.getenv("KNOWLEDGE_BASE_PATH", "./knowledge_base"))
+    RAILWAY_STATIC_URL: str = os.getenv("RAILWAY_STATIC_URL", "https://knowledge-bot.railway.app")
     
     # Processing Configuration
     TARGET_CONTENT_LENGTH: int = int(os.getenv("TARGET_CONTENT_LENGTH", "2500"))
-    ENABLE_IMAGE_GENERATION: bool = os.getenv("ENABLE_IMAGE_GENERATION", "true").lower() == "true"
     MAX_PROCESSING_TIME: int = int(os.getenv("MAX_PROCESSING_TIME", "1800"))  # 30 minutes
     
     # GitHub Integration (Optional)

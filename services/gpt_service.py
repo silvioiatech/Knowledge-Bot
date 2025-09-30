@@ -1,15 +1,14 @@
-"""GPT service for content polishing and final formatting."""
+"""GPT service for course/KB finalization and content formatting."""
 
-import json
-from typing import Dict, Any, Optional
 import httpx
 from loguru import logger
 
 from config import Config
+from core.models.content_models import GeminiAnalysis
 
 
-class GPTContentPolisher:
-    """GPT service specifically for polishing and formatting content for Notion."""
+class GPTFinalizerService:
+    """GPT service for finalizing content into course/knowledge base format."""
     
     def __init__(self):
         self.api_key = Config.OPENROUTER_API_KEY
@@ -29,55 +28,56 @@ class GPTContentPolisher:
             }
         )
         
-        logger.info(f"Initialized GPT Content Polisher with model: {self.model}")
+        logger.info(f"Initialized GPT Finalizer with model: {self.model}")
     
-    async def polish_content_for_notion(
+    async def finalize_to_course_format(
         self, 
-        claude_content: str, 
-        title: str, 
-        category: str,
-        source_url: str
+        markdown_from_claude: str, 
+        analysis: GeminiAnalysis
     ) -> str:
-        """Polish Claude's architectural content into clean, professional Notion format."""
+        """Transform Claude's content into structured course/knowledge base format."""
         
-        polish_prompt = f"""
-You are a professional content editor specializing in technical documentation for Notion databases.
+        # Extract key metadata from analysis
+        title = analysis.video_metadata.title or "Technical Course"
+        main_topic = analysis.content_outline.main_topic
+        difficulty = analysis.content_outline.difficulty_level
+        key_concepts = analysis.content_outline.key_concepts[:5]
+        learning_objectives = analysis.content_outline.learning_objectives[:3]
+        
+        finalize_prompt = f"""
+Transform this educational content into a comprehensive course/knowledge base format.
 
-TASK: Transform this educational content into a polished, professional format optimized for Notion.
+COURSE METADATA:
+- Title: {title}
+- Subject: {main_topic}
+- Difficulty: {difficulty}
+- Key Concepts: {', '.join(key_concepts)}
+- Learning Objectives: {', '.join(learning_objectives)}
 
-REQUIREMENTS:
-1. **Clean Markdown Format**: Perfect for Notion import
-2. **Professional Tone**: Educational but accessible
-3. **Clear Structure**: Logical flow with proper headings
-4. **Technical Accuracy**: Maintain all technical details
-5. **Consistent Formatting**: Uniform style throughout
-6. **Notion-Optimized**: Use Notion-friendly markdown features
+SOURCE CONTENT:
+{markdown_from_claude}
 
-CONTENT TO POLISH:
-Title: {title}
-Category: {category}
-Source: {source_url}
+REQUIRED COURSE STRUCTURE:
+1. **Course Overview** (2-3 sentences)
+2. **Learning Objectives** (3-5 clear outcomes)
+3. **Prerequisites** (what learners need to know)
+4. **Course Modules/Chapters** (2-4 logical sections)
+5. **Step-by-Step Labs/Exercises** (practical activities)
+6. **Assessment/Quiz** (3-5 questions to test understanding)
+7. **Glossary** (key terms and definitions)
+8. **Resources & References** (additional learning materials)
 
-Raw Content:
-{claude_content}
+FORMATTING REQUIREMENTS:
+- Maintain YAML frontmatter at the top
+- Add a Table of Contents after frontmatter
+- Use clear headings (H1, H2, H3)
+- Include code blocks where relevant
+- Add practical examples and exercises
+- Use callouts for important notes (> blockquotes)
+- Ensure professional, educational tone
+- Make content self-contained and comprehensive
 
-POLISHING GUIDELINES:
-- Use clear, engaging headings (H1, H2, H3)
-- Create bulleted and numbered lists for better readability
-- Add code blocks with proper syntax highlighting when relevant
-- Include callout boxes for important notes (use > blockquotes)
-- Ensure smooth transitions between sections
-- Make technical concepts accessible to the target audience
-- Remove any redundancy or unclear phrasing
-- Add practical examples where appropriate
-- Format any links properly
-- Ensure perfect grammar and punctuation
-
-OUTPUT FORMAT:
-Return the polished content in clean markdown format, ready for Notion import.
-Do not include any metadata headers - just the polished content.
-
-Begin with the title as an H1, then provide the polished content.
+OUTPUT: Return the complete course in markdown format, ready for knowledge base storage.
 """
 
         try:
@@ -88,15 +88,15 @@ Begin with the title as an H1, then provide the polished content.
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are a professional technical content editor. Your job is to polish and format educational content for maximum clarity and impact."
+                            "content": "You are a professional course designer specializing in technical education. Create comprehensive, structured learning materials."
                         },
                         {
                             "role": "user", 
-                            "content": polish_prompt
+                            "content": finalize_prompt
                         }
                     ],
                     "max_tokens": self.max_tokens,
-                    "temperature": 0.3,  # Lower temperature for consistent formatting
+                    "temperature": 0.2,  # Low temperature for consistent structure
                     "top_p": 0.9
                 },
                 headers={"Content-Type": "application/json"}
@@ -104,87 +104,17 @@ Begin with the title as an H1, then provide the polished content.
             
             if response.status_code != 200:
                 logger.error(f"GPT API error: {response.status_code} - {response.text}")
-                return claude_content  # Return original if polishing fails
+                return markdown_from_claude  # Return original if finalization fails
             
             result = response.json()
-            polished_content = result["choices"][0]["message"]["content"].strip()
+            finalized_content = result["choices"][0]["message"]["content"].strip()
             
-            logger.success(f"Content polished successfully - {len(polished_content)} characters")
-            return polished_content
-            
-        except Exception as e:
-            logger.error(f"GPT polishing failed: {e}")
-            return claude_content  # Return original content if polishing fails
-    
-    async def enhance_notion_blocks(
-        self, 
-        content: str, 
-        target_word_count: int = 2000
-    ) -> str:
-        """Enhance content specifically for Notion block structure."""
-        
-        enhance_prompt = f"""
-Optimize this content for Notion's block-based structure.
-
-TARGET: {target_word_count} words
-
-REQUIREMENTS:
-1. **Perfect Block Structure**: Each paragraph should be a clear Notion block
-2. **Rich Formatting**: Use bold, italic, code, and lists effectively
-3. **Logical Flow**: Clear progression from basic to advanced concepts
-4. **Practical Focus**: Include actionable insights and examples
-5. **Professional Polish**: Editorial quality suitable for knowledge base
-
-Content to enhance:
-{content}
-
-OPTIMIZATION GUIDELINES:
-- Break long paragraphs into digestible blocks
-- Use subheadings to create clear sections
-- Add practical examples with code blocks
-- Include tips and best practices as callouts
-- Ensure each block has a clear purpose
-- Maintain technical accuracy while improving readability
-- Add transitional phrases for better flow
-- Include relevant terminology and definitions
-
-Return the enhanced content in clean markdown format.
-"""
-
-        try:
-            response = await self.client.post(
-                f"{self.base_url}/chat/completions",
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "You are a Notion content optimization specialist. Create perfectly structured content for knowledge bases."
-                        },
-                        {
-                            "role": "user",
-                            "content": enhance_prompt
-                        }
-                    ],
-                    "max_tokens": self.max_tokens,
-                    "temperature": 0.2,
-                    "top_p": 0.85
-                }
-            )
-            
-            if response.status_code != 200:
-                logger.error(f"GPT block enhancement error: {response.status_code}")
-                return content
-            
-            result = response.json()
-            enhanced_content = result["choices"][0]["message"]["content"].strip()
-            
-            logger.success("Content enhanced for Notion blocks")
-            return enhanced_content
+            logger.success(f"Content finalized to course format - {len(finalized_content)} characters")
+            return finalized_content
             
         except Exception as e:
-            logger.error(f"GPT block enhancement failed: {e}")
-            return content
+            logger.error(f"GPT finalization failed: {e}")
+            return markdown_from_claude  # Return original content if finalization fails
     
     async def close(self):
         """Clean up resources."""
