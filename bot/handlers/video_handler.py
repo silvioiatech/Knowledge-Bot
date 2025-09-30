@@ -570,8 +570,7 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             
             await callback.message.edit_text(
                 text=result_message,
-                parse_mode="HTML",
-                disable_web_page_preview=True
+                parse_mode="HTML"
             )
         else:
             await callback.message.edit_text(
