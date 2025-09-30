@@ -620,5 +620,3 @@ For more information on this topic, refer to the original video source and relat
                 logger.debug(f"{self.__class__.__name__} HTTP client closed")
             except Exception as e:
                 logger.warning(f"Error closing HTTP client: {e}")
-
-        ]
