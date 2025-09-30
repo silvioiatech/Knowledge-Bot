@@ -1,406 +1,78 @@
-# 🤖 Enhanced Knowledge Bot
+# 🤖 Knowledge Bot
 
-**Intelligent video content analysis with smart AI optimization and comprehensive knowledge base creation.**
+AI-powered Telegram bot that transforms social media videos into educational content with Notion integration.
 
-Transform TikTok and Instagram videos into comprehensive, textbook-quality educational content using advanced AI analysis and conditional image generation.
+## Features
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
-[![Railway](https://img.shields.io/badge/Deploy-Railway-purple.svg)](https://railway.app)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+- 🎥 Video analysis with Google Gemini 2.5 Pro
+- 🧠 Educational content generation with Claude 3.5 Sonnet
+- 🎨 Smart image generation when valuable
+- 📊 Automatic Notion database integration
+- 🏷️ Interactive category selection
+- ⚡ Async, non-blocking architecture
 
-## ✨ Enhanced Features
+## Quick Start
 
-### 🧠 **Smart AI Analysis**
-- **Gemini 1.5 Flash** - Advanced video content understanding with 20+ analysis fields
-- **Claude 3.5 Sonnet** - Professional textbook-quality content generation (3000+ words)
-- **Intelligent Category Suggestion** - AI-powered categorization with confidence scoring
+### Prerequisites
 
-### 🎨 **Conditional Image Generation**
-- **Smart Cost Management** - Claude evaluates when visuals truly enhance understanding
-- **Gemini 2.5 Flash Image Preview** - Generates technical diagrams only when beneficial
-- **Professional Illustrations** - Flowcharts, architectures, and process diagrams
+- Python 3.11+
+- API Keys: Telegram, Gemini, OpenRouter, Notion
 
-### 🔄 **Interactive Workflow**
-- **Category Selection** - User-controlled content organization with inline keyboards
-- **Preview & Approve** - Review AI analysis before final processing
-- **Quality Control** - Approve, reject, or re-analyze with enhanced focus
-
-### 🗄️ **Comprehensive Storage**
-- **Notion Database Integration** - Perfect schema mapping with all required fields
-- **Railway Web Access** - Remote content viewing and editing
-- **Enhanced Markdown** - Rich frontmatter with metadata and cross-references
-
-## 🚀 Quick Start
-
-### 1. Clone & Setup
+### Installation
 
 ```bash
-git clone https://github.com/silvioiatech/Knowledge-Bot.git
+git clone https://github.com/yourusername/Knowledge-Bot.git
 cd Knowledge-Bot
 pip install -r requirements.txt
-```
-
-### 2. Configure Environment
-
-```bash
 cp .env.example .env
 # Edit .env with your API keys
-```
-
-**Required API Keys:**
-- **Telegram Bot Token**: Get from [@BotFather](https://t.me/botfather)
-- **Gemini API Key**: Get from [Google AI Studio](https://aistudio.google.com)
-- **OpenRouter API Key**: Get from [OpenRouter](https://openrouter.ai)
-
-### 3. Launch Enhanced Bot
-
-```bash
 python main.py
 ```
 
-## 📋 Environment Configuration
+## Deployment
 
-### Core Settings
+### Railway
 
-```env
-# Telegram Bot
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+1. Connect GitHub repo to Railway
+2. Set environment variables (see `.env.example`)
+3. Deploy automatically on push
 
-# AI Services
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-pro
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-
-# Models via OpenRouter
-CLAUDE_MODEL=anthropic/claude-3.5-sonnet
-IMAGE_MODEL=google/gemini-2.5-flash-image-preview
-
-# Railway Deployment
-RAILWAY_STATIC_URL=https://your-app.up.railway.app
-KNOWLEDGE_BASE_PATH=/app/knowledge_base
-```
-
-### Enhanced Features
-
-```env
-# Smart Image Generation
-ENABLE_IMAGE_GENERATION=true
-TARGET_CONTENT_LENGTH=3000
-
-# Notion Integration
-USE_NOTION_STORAGE=true
-NOTION_API_KEY=secret_your_notion_integration_key
-NOTION_DATABASE_ID=your_database_id_here
-
-# Quality Control
-MAX_PROCESSING_TIME=1800
-```
-
-## 🎯 Enhanced Workflow
-
-1. **📱 Send Video URL** → User sends TikTok/Instagram video URL
-2. **🤖 AI Analysis** → Gemini analyzes content with 20+ data fields
-3. **📊 Preview & Categorization** → Interactive preview with AI-suggested categories
-4. **🔄 User Selection** → Choose or modify categories using inline keyboards
-5. **🎨 Smart Image Evaluation** → Claude determines if diagrams would enhance understanding
-6. **✨ Content Generation** → Comprehensive educational content creation
-7. **💾 Multi-Storage** → Save to Railway, Notion, and local markdown with web access
-
-## 📊 Enhanced Output Examples
-
-### Comprehensive Markdown with Metadata
-
-```markdown
----
-title: "Advanced Python AsyncIO Patterns"
-category: "🤖 AI"
-subcategory: "Development"
-difficulty: "Intermediate" 
-content_quality: "⭐⭐⭐ Good"
-word_count: 3247
-processing_date: "2024-01-15T10:30:00"
-source_video: "https://tiktok.com/@user/video/123"
-gemini_confidence: 87
-tags: ["python", "async", "performance"]
-tools_mentioned: ["Python", "AsyncIO", "aiohttp"]
-platform_specific: ["Universal"]
-auto_created: true
-verified: false
----
-
-# Advanced Python AsyncIO Patterns
-
-> **📊 Content Overview**  
-> **Category:** 🤖 AI → Development  
-> **Difficulty:** Intermediate | **Quality:** ⭐⭐⭐ Good  
-> **Word Count:** 3,247 words | **Confidence:** 87%
-
-## 🔑 Key Learning Points
-
-1. Event loops and coroutines fundamentals
-2. Error handling strategies in async code
-3. Performance optimization techniques
-4. Production deployment patterns
-
-**🛠️ Tools Mentioned:** Python, AsyncIO, aiohttp
-
-**🏷️ Tags:** #python #async #performance
-
----
-
-## Overview
-
-Comprehensive guide to modern asynchronous programming in Python...
-
-## Key Concepts
-
-[Detailed technical content generated by Claude...]
-
-## Practical Implementation
-
-[Code examples and best practices...]
-
-## 📊 Generated Diagrams
-
-### AsyncIO Event Loop Architecture
-
-![Event Loop Diagram](diagram_url_here)
-
-*Technical diagram showing event loop flow and coroutine execution*
-
-## Additional Resources
-
-- [Official AsyncIO Documentation](https://docs.python.org/3/library/asyncio.html)
-- [Real Python AsyncIO Guide](https://realpython.com/async-io-python/)
-```
-
-### Enhanced Telegram Response
-
-```
-🎉 Content Successfully Processed!
-
-📖 Title: Advanced Python AsyncIO Patterns
-📂 Category: 🤖 AI
-📋 Subcategory: Development
-⭐ Quality: ⭐⭐⭐ Good
-⚡ Difficulty: Intermediate
-📊 Word Count: 3,247 words
-🎯 Confidence: 87%
-
-🔗 Platform: Universal
-🛠️ Tools: Python, AsyncIO, aiohttp (+2 more)
-🏷️ Tags: #python #async #performance (+3 more)
-
-🔑 Key Points:
-1. Event loops and coroutines fundamentals
-2. Error handling strategies in async code
-3. Performance optimization techniques
-   (+2 more points)
-
-🔗 Access Your Content:
-🌐 View Online: https://your-app.up.railway.app/view/ai/20240115-advanced-python-asyncio.md
-📝 Raw Markdown: https://your-app.up.railway.app/raw/ai/20240115-advanced-python-asyncio.md
-📚 Notion Database: https://notion.so/your-page-id
-
-💡 Your content has been organized and is ready for learning!
-```
-
-## 🏗️ Enhanced Architecture
-
-```
-Knowledge-Bot/
-├── 🤖 main.py                           # Enhanced main application
-├── ⚙️ config.py                         # Comprehensive configuration
-├── 📁 bot/
-│   ├── handlers/
-│   │   └── video_handler.py             # Complete workflow with callbacks
-│   └── interactive_category_system.py   # Smart category selection
-├── 🔧 services/
-│   ├── enhanced_claude_service.py       # Intelligent content architecture
-│   ├── enhanced_gemini_service.py       # Advanced video analysis
-│   ├── image_generation_service.py      # Conditional diagram generation
-│   └── railway_client.py                # Video download service
-├── 💾 storage/
-│   ├── notion_storage.py                # Perfect schema integration
-│   ├── railway_storage.py               # Web-accessible storage
-│   └── markdown_storage.py              # Enhanced markdown with frontmatter
-├── 🧠 core/models/
-│   └── content_models.py                # Complete data models
-└── 🌐 railway_server.py                 # Web file browser
-```
-
-## 🔧 Notion Database Integration
-
-### Perfect Schema Mapping
-
-Your Notion database fields are automatically populated:
-
-- **Title** (title) - Auto-extracted from content
-- **Category** (select) - 🍎 APPLE, 🐧 LINUX, 🤖 AI, etc.
-- **Subcategory** (select) - Programs, Automations, Development, etc.
-- **Content Quality** (select) - ⭐ Raw → ⭐⭐⭐⭐⭐ Production Ready
-- **Difficulty** (select) - Beginner, Intermediate, Advanced, Expert
-- **Word Count** (number) - Auto-calculated
-- **Gemini Confidence** (number) - 0-100 AI confidence score
-- **Tags** (multi_select) - Auto-extracted technical tags
-- **Tools Mentioned** (multi_select) - Auto-detected technologies
-- **Platform Specific** (multi_select) - macOS, Linux, Windows, Universal
-- **Source Video** (url) - Original video link
-- **Processing Date** (date) - Auto-timestamp
-- **Key Points** (rich_text) - Bullet-pointed learning objectives
-
-## 🚀 Railway Deployment
-
-### 1. Setup Railway
+### Required Environment Variables
 
 ```bash
-npm install -g @railway/cli
-railway login
-railway link
-railway add volume --name knowledge-base --mount /app/knowledge_base
-railway deploy
-```
-
-### 2. Environment Variables
-
-Set in Railway dashboard:
-```env
 TELEGRAM_BOT_TOKEN=your_token
 GEMINI_API_KEY=your_key
+GEMINI_MODEL=gemini-2.5-pro
 OPENROUTER_API_KEY=your_key
-RAILWAY_STATIC_URL=https://your-app.up.railway.app
-PORT=8000
+CLAUDE_MODEL=anthropic/claude-3.5-sonnet
+IMAGE_MODEL=google/gemini-2.5-flash-image-preview
+NOTION_API_KEY=your_key
+NOTION_DATABASE_ID=your_id
 ```
 
-### 3. Access Your Enhanced Knowledge Base
+## Usage
 
-- **Web Browser**: `https://your-app.up.railway.app/kb/`
-- **Category View**: `https://your-app.up.railway.app/kb/ai/`
-- **File Viewer**: `https://your-app.up.railway.app/view/ai/filename.md`
-- **Raw Access**: `https://your-app.up.railway.app/raw/ai/filename.md`
+1. Start chat with bot on Telegram
+2. Send `/start`
+3. Share TikTok or Instagram video URL
+4. Approve analysis
+5. Select category
+6. Entry saved to Notion
 
-## 🎨 Smart Image Generation
+## Architecture
 
-### Cost-Optimized Conditional Generation
+```
+bot/           - Telegram handlers
+services/      - AI services (Gemini, Claude)
+storage/       - Notion & Markdown storage
+core/          - Data models
+utils/         - Helper functions
+```
 
-Claude intelligently evaluates when diagrams truly enhance understanding:
+## License
 
-**✅ Generates Images For:**
-- System architecture explanations
-- Step-by-step tutorials with UI elements
-- Process flows and workflows
-- Code patterns and structures
-- Network diagrams
-
-**❌ Skips Images For:**
-- Simple definitions or theory
-- Text-based tutorials
-- Opinion pieces
-- Pure code explanations
-
-**Cost Impact:** 40-60% savings on image generation while maintaining quality.
-
-## 🔒 Enhanced Security & Performance
-
-### Production-Ready Features
-
-- ✅ **Smart Rate Limiting** - 10 videos per user per hour
-- ✅ **Session Management** - TTL-based cleanup prevents memory leaks
-- ✅ **Callback Security** - Secure inline keyboard handling
-- ✅ **Error Recovery** - Comprehensive error handling with user feedback
-- ✅ **Cost Optimization** - Intelligent resource usage across all AI services
-- ✅ **Quality Validation** - Interactive approval workflow with re-analysis options
-
-### Performance Optimizations
-
-- ✅ **Non-blocking Processing** - Multiple users can process simultaneously
-- ✅ **Service Singleton Pattern** - Efficient resource management
-- ✅ **Persistent Storage** - Railway files survive deployments
-- ✅ **Background Cleanup** - Automatic session expiration (30 minutes)
-
-## 📱 Enhanced Usage
-
-### Interactive Commands
-
-- `/start` - Initialize enhanced bot with feature overview
-- Send video URL - Begin intelligent processing workflow
-- Interactive buttons for category selection and approval
-
-### Smart Workflow
-
-1. **Send URL** → Gemini analyzes with 20+ fields
-2. **Preview** → Comprehensive analysis summary with quality metrics
-3. **Categories** → AI suggests categories, user can modify via inline keyboards
-4. **Processing** → Conditional image generation + Claude content creation
-5. **Results** → Multi-format storage with web access links
-
-## 🚨 Troubleshooting Enhanced Features
-
-### Common Issues
-
-**❌ Category Selection Not Working**
-- Check callback handlers are properly registered
-- Verify interactive_category_system.py is properly imported
-- Ensure session state is maintained
-
-**❌ Image Generation Errors**  
-- Verify `google/gemini-2.5-flash-image-preview` model access
-- Check OpenRouter credits and API key
-- Confirm `ENABLE_IMAGE_GENERATION=true` in environment
-
-**❌ Notion Integration Fails**
-- Validate database ID and integration permissions
-- Verify all required fields exist in database schema
-- Check API key has write access to database
-
-**❌ Railway Web Access 404**
-- Confirm `RAILWAY_STATIC_URL` matches your deployment
-- Verify knowledge_base volume is properly mounted
-- Check file paths and category folder creation
-
-## 📊 Enhanced Configuration Reference
-
-| Variable | Description | Default | Enhanced Feature |
-|----------|-------------|---------|------------------|
-| `CLAUDE_MODEL` | Content generation model | `anthropic/claude-3.5-sonnet` | ✅ Professional content |
-| `IMAGE_MODEL` | Diagram generation model | `google/gemini-2.5-flash-image-preview` | ✅ Conditional images |
-| `TARGET_CONTENT_LENGTH` | Target word count | `3000` | ✅ Comprehensive content |
-| `ENABLE_IMAGE_GENERATION` | Smart image creation | `true` | ✅ Cost optimization |
-| `USE_NOTION_STORAGE` | Database integration | `false` | ✅ Perfect schema mapping |
-| `RAILWAY_STATIC_URL` | Web access base URL | - | ✅ Remote content access |
-| `MAX_PROCESSING_TIME` | Processing timeout | `1800` | ✅ Complex workflow support |
-
-## 🤝 Contributing to Enhanced Features
-
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/enhanced-feature`
-3. **Test** enhanced workflows thoroughly
-4. **Commit** changes: `git commit -m 'Add enhanced feature'`
-5. **Push** to branch: `git push origin feature/enhanced-feature`
-6. **Submit** a Pull Request with detailed description
-
-## 📄 License
-
-MIT License - Enhanced version maintains open-source accessibility.
-
-## 🌟 Enhanced Acknowledgments
-
-- **Google Gemini 2.5** - Advanced video analysis and conditional image generation
-- **Anthropic Claude 3.5** - Professional textbook-quality content creation via OpenRouter
-- **Railway** - Reliable cloud deployment with persistent web-accessible storage
-- **Notion** - Comprehensive database integration with perfect schema mapping
+MIT License - see LICENSE file
 
 ---
 
-**⭐ Star this repository if the enhanced features help streamline your knowledge creation workflow!**
-
-### 🎯 Enhanced Value Proposition
-
-This isn't just a video-to-text converter - it's an **intelligent knowledge curation system** that:
-- **Saves 40-60% on AI costs** through smart conditional processing
-- **Creates professional-grade content** comparable to technical documentation
-- **Provides multiple access methods** (web, mobile, API, database)
-- **Scales intelligently** with user-controlled quality and categorization
-- **Integrates seamlessly** with existing knowledge management workflows
-
-Perfect for **technical educators**, **content creators**, **researchers**, and **knowledge workers** who want to transform video content into searchable, organized, professional reference material.
+Built with ❤️ using Google Gemini, Anthropic Claude, and Notion
