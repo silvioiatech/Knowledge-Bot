@@ -602,6 +602,7 @@ For more information on this topic, refer to the original video source and relat
                     ]
                 }
             }
+        ]
 
     async def __aenter__(self):
         """Async context manager entry."""
