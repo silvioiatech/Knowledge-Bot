@@ -70,18 +70,18 @@ class SmartImageGenerationService:
                     
                     if image_data:
                         # Save image to file
-                        image_path = await self._save_image(image_data, plan.title)
+                        image_path = await self._save_image(image_data, plan.description)
                         
                         generated_image = GeneratedImage(
-                            title=plan.title,
+                            title=plan.description,
                             description=plan.description,
                             file_path=str(image_path),
                             prompt=enhanced_prompt,
-                            type=plan.type
+                            type=plan.image_type
                         )
                         
                         generated_images.append(generated_image)
-                        logger.info(f"Generated image {i+1}/{len(image_evaluation.image_plans)}: {plan.title}")
+                        logger.info(f"Generated image {i+1}/{len(image_evaluation.image_plans)}: {plan.description}")
                     
                 except Exception as e:
                     logger.error(f"Failed to generate image {i+1}: {e}")
@@ -111,15 +111,15 @@ Layout: Clear visual hierarchy with labels
 Colors: Professional color scheme (blues, grays, accent colors)
 Quality: High-resolution, suitable for educational content
 
-Specific requirements: {plan.title}
+Specific requirements: {plan.description}
 """
         
         # Add type-specific enhancements
-        if plan.type == "architecture":
+        if plan.image_type == "architecture":
             enhanced_prompt += "\nArchitectural style: System components, data flow, connections"
-        elif plan.type == "workflow":
+        elif plan.image_type == "workflow":
             enhanced_prompt += "\nWorkflow style: Step-by-step process, arrows, decision points"
-        elif plan.type == "concept":
+        elif plan.image_type == "concept":
             enhanced_prompt += "\nConcept style: Clear visual metaphors, labeled components"
         
         return enhanced_prompt.strip()

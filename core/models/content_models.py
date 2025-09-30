@@ -406,15 +406,6 @@ class NotionPayload:
                 "Platform Specific": {
                     "multi_select": [{"name": platform} for platform in self.platform_specific]
                 },
-                "Prerequisites": {
-                    "multi_select": [{"name": prereq} for prereq in self.prerequisites]
-                },
-                "Related": {
-                    "multi_select": [{"name": topic} for topic in self.related_topics]
-                },
-                "Advanced Topics": {
-                    "multi_select": [{"name": topic} for topic in self.advanced_topics]
-                },
                 "Auto-Created Category": {
                     "checkbox": self.auto_created
                 },
