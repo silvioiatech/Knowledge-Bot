@@ -535,7 +535,7 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             await callback.message.edit_text("🎨 Evaluating image generation necessity...")
             
             image_evaluation = await claude_service_inst.evaluate_image_necessity(
-                enhanced_content
+                session['analysis'], category_for_claude
             )
             
             generated_images = []
