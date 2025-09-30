@@ -553,33 +553,19 @@ async def handle_category_selection(callback: CallbackQuery) -> None:
             # Step 5: Extract Notion metadata
             await callback.message.edit_text("📊 Preparing database entry...")
             
-            notion_metadata = await claude_service_inst.extract_notion_metadata(
+            notion_payload = await claude_service_inst.extract_notion_metadata(
                 enhanced_content, session['analysis'], category_for_claude
             )
             
-            # Create NotionPayload
-            notion_payload = NotionPayload(
-                title=notion_metadata.title,
-                category=selected_category,
-                subcategory=notion_metadata.subcategory,
-                content_quality=notion_metadata.content_quality,
-                difficulty=notion_metadata.difficulty,
-                word_count=len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0,
-                processing_date=datetime.now().isoformat(),
-                source_video=session['video_url'],
-                key_points=notion_metadata.key_points,
-                gemini_confidence=notion_metadata.gemini_confidence,
-                tags=notion_metadata.tags,
-                tools_mentioned=notion_metadata.tools_mentioned,
-                platform_specific=notion_metadata.platform_specific,
-                prerequisites=notion_metadata.prerequisites,
-                related_topics=notion_metadata.related,
-                advanced_topics=notion_metadata.advanced_topics,
-                auto_created=True,
-                verified=False,
-                ready_for_script=notion_metadata.content_quality in ["📚 High Quality", "🌟 Premium"],
-                ready_for_ebook=notion_metadata.content_quality == "🌟 Premium"
-            )
+            # Update fields from handler context
+            notion_payload.category = selected_category
+            notion_payload.word_count = len(enhanced_content.split()) if isinstance(enhanced_content, str) else 0
+            notion_payload.processing_date = datetime.now().isoformat()
+            notion_payload.source_video = session['video_url']
+            notion_payload.auto_created = True
+            notion_payload.verified = False
+            notion_payload.ready_for_script = notion_payload.content_quality in ["📚 High Quality", "🌟 Premium"]
+            notion_payload.ready_for_ebook = notion_payload.content_quality == "🌟 Premium"
             
             # Add content blocks for Notion
             if isinstance(enhanced_content, str):

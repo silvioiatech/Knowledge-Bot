@@ -52,8 +52,8 @@ class SmartImageGenerationService:
         Generate images only when evaluation determines they add value.
         Cost-optimized approach.
         """
-        if not self.enabled or not image_evaluation.should_generate:
-            logger.info(f"Image generation skipped: enabled={self.enabled}, should_generate={image_evaluation.should_generate}")
+        if not self.enabled or not image_evaluation.needs_images:
+            logger.info(f"Image generation skipped: enabled={self.enabled}, needs_images={image_evaluation.needs_images}")
             return []
         
         try:
