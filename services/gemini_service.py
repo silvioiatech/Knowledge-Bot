@@ -110,23 +110,27 @@ class EnhancedGeminiService:
             ))
         
         # Create content outline
+        content_outline_raw = analysis.get("content_outline", {})
+        educational_obj = analysis.get("educational_objectives", {})
+        
         content_outline = ContentOutline(
-            main_topic=analysis.get("educational_objectives", {}).get("primary_learning_goals", ["General"])[0],
-            subtopics=analysis.get("educational_objectives", {}).get("subtopics", []),
-            key_concepts=[entity.name for entity in entities[:5]],
-            learning_objectives=analysis.get("educational_objectives", {}).get("primary_learning_goals", [])[:3],
-            prerequisites=analysis.get("educational_objectives", {}).get("prerequisites", []),
-            difficulty_level=analysis.get("educational_objectives", {}).get("difficulty_level", "intermediate")
+            main_topic=analysis.get("video_metadata", {}).get("main_topic", "General Technical Content"),
+            subtopics=content_outline_raw.get("main_sections", []),
+            key_concepts=content_outline_raw.get("key_points", []),
+            learning_objectives=educational_obj.get("primary_learning_goals", []),
+            prerequisites=educational_obj.get("prerequisites", []),
+            difficulty_level=educational_obj.get("difficulty_level", "intermediate")
         )
         
-        # Create quality scores (realistic, capped at 100)
+        # Create quality scores (use actual Gemini scores or realistic defaults)
+        quality_raw = analysis.get("quality_assessment", {})
         quality_scores = QualityScores(
-            overall=min(85.0, max(60.0, len(entities) * 10 + 50)),  # 60-85 range
-            technical_depth=min(80.0, max(50.0, len(entities) * 8 + 40)),
-            content_accuracy=min(90.0, max(70.0, len(transcript) * 5 + 60)),
-            completeness=min(85.0, max(65.0, len(analysis.get("key_points", [])) * 15 + 50)),
-            educational_value=min(90.0, max(70.0, len(content_outline.key_concepts) * 12 + 55)),
-            source_credibility=min(75.0, max(55.0, len(analysis.get("technical_concepts", [])) * 8 + 45))
+            overall=min(95.0, max(60.0, quality_raw.get("overall_quality", 75))),
+            technical_depth=min(90.0, max(50.0, quality_raw.get("technical_accuracy_confidence", 70))),
+            content_accuracy=min(95.0, max(70.0, quality_raw.get("technical_accuracy_confidence", 80))),
+            completeness=min(90.0, max(65.0, quality_raw.get("completeness", 75))),
+            educational_value=min(95.0, max(70.0, quality_raw.get("educational_value", 80))),
+            source_credibility=min(85.0, max(60.0, quality_raw.get("content_clarity", 75)))
         )
         
         return GeminiAnalysis(
@@ -159,61 +163,67 @@ class EnhancedGeminiService:
             logger.info("Falling back to metadata-based analysis...")
             return await self._create_fallback_analysis(video_path, video_url, platform)
 
-        # Enhanced analysis prompt with strict formatting and realistic scaling
+        # Enhanced analysis prompt with strict JSON structure
         analysis_prompt = f"""
 Analyze this {platform} video comprehensively for educational content creation.
 
 CRITICAL INSTRUCTIONS:
-- All scores must be realistic percentages between 0-100 (NOT over 100)
-- Extract actual spoken content and visible text/code
-- Provide specific, actionable learning outcomes
-- Be precise about tools and technologies mentioned
+- Respond with valid JSON only (no markdown, no code blocks)
+- All quality scores must be integers between 0-100
+- Extract actual spoken content and visible elements
+- Be specific about tools and technologies mentioned
 
-Required Analysis Sections:
+Respond with this exact JSON structure:
 
-1. CONTENT SUMMARY (2-3 sentences):
-What does this video teach? What will viewers learn?
+{{
+  "content_summary": "What this video teaches in 2-3 sentences",
+  "video_metadata": {{
+    "title": "Video title if visible/mentioned",
+    "main_topic": "Specific main topic",
+    "author_expertise": "beginner|intermediate|advanced|expert",
+    "target_audience": "beginner|intermediate|advanced",
+    "duration_seconds": estimated_duration_number,
+    "language": "en"
+  }},
+  "transcript": [
+    {{
+      "start_time": 0.0,
+      "end_time": 30.0,
+      "text": "Important spoken content",
+      "speaker": "main",
+      "confidence": 0.8
+    }}
+  ],
+  "technical_concepts": [
+    {{
+      "name": "Specific concept name",
+      "type": "technology|concept|tool|method",
+      "context": "How it's mentioned in video",
+      "importance": "high|medium|low"
+    }}
+  ],
+  "educational_objectives": {{
+    "primary_learning_goals": ["Goal 1", "Goal 2", "Goal 3"],
+    "prerequisites": ["Prerequisite 1", "Prerequisite 2"],
+    "difficulty_level": "beginner|intermediate|advanced",
+    "estimated_learning_time": "X minutes"
+  }},
+  "content_outline": {{
+    "main_sections": ["Section 1", "Section 2", "Section 3"],
+    "key_points": ["Key point 1", "Key point 2", "Key point 3"],
+    "practical_examples": ["Example 1", "Example 2"]
+  }},
+  "quality_assessment": {{
+    "content_clarity": 75,
+    "technical_accuracy_confidence": 80,
+    "educational_value": 85,
+    "completeness": 70,
+    "overall_quality": 78
+  }},
+  "extracted_tools": ["Tool1", "Tool2", "Tool3"]
+}}
 
-2. VIDEO METADATA:
-- Exact title (if visible/spoken)
-- Main topic (be specific)
-- Author expertise level
-- Target audience (beginner/intermediate/advanced)
-- Primary language
-
-3. LEARNING CONTENT:
-- Key technical concepts (3-5 specific points)
-- Tools/technologies mentioned (be precise)
-- Practical skills demonstrated
-- Prerequisites needed
-- Estimated learning time
-
-4. TRANSCRIPT EXTRACTION:
-- Important spoken phrases
-- Technical terminology used
-- Code/commands mentioned
-- Key explanations given
-
-5. VISUAL CONTENT:
-- Text visible on screen
-- Code snippets shown
-- UI/interface elements
-- Diagrams or charts
-
-6. QUALITY ASSESSMENT (0-100 scale ONLY):
-- Content clarity: [score 0-100]
-- Technical accuracy: [score 0-100] 
-- Educational value: [score 0-100]
-- Completeness: [score 0-100]
-- Audio/video quality: [score 0-100]
-
-7. EDUCATIONAL OBJECTIVES:
-- Primary learning goals (3-5 specific outcomes)
-- Practical applications
-- Real-world use cases
-
-Respond in JSON format with realistic scores (0-100 range) and specific content details.
-"""        # Generate analysis
+Analyze the video and provide the response in this exact JSON format."""        # Generate analysis
         logger.debug("Generating comprehensive analysis...")
         response = await asyncio.to_thread(
             self.model.generate_content,
@@ -224,11 +234,17 @@ Respond in JSON format with realistic scores (0-100 range) and specific content 
         response_text = response.text.strip()
         logger.debug(f"Raw Gemini response: {response_text[:200]}...")
         
-        # Try to extract JSON if wrapped in code blocks
+        # Clean response text - remove any markdown formatting
         if response_text.startswith("```json"):
             response_text = response_text[7:-3].strip()
         elif response_text.startswith("```"):
             response_text = response_text[3:-3].strip()
+        
+        # Remove any leading/trailing text that's not JSON
+        json_start = response_text.find('{')
+        json_end = response_text.rfind('}')
+        if json_start != -1 and json_end != -1:
+            response_text = response_text[json_start:json_end+1]
         
         # Parse JSON or create structured data from text
         try:
@@ -465,44 +481,68 @@ Respond in JSON format with realistic scores (0-100 range) and specific content 
         """Create a fallback analysis when video upload fails."""
         logger.info("Creating fallback analysis based on video metadata...")
         
-        # Create basic analysis structure
+        # Get video duration estimate
+        duration = 30  # Default
+        try:
+            if os.path.exists(video_path):
+                stat = os.stat(video_path)
+                duration = min(300, max(10, stat.st_size // 100000))  # Rough estimate
+        except Exception:
+            pass
+        
+        # Create basic analysis structure matching new JSON format
         fallback_analysis = {
+            "content_summary": f"Technical video content from {platform} - manual review recommended for detailed analysis.",
             "video_metadata": {
-                "title": f"Video from {platform}",
+                "title": f"Technical Content from {platform}",
                 "main_topic": "General Technical Content", 
-                "author_expertise": "unknown",
-                "target_audience": "general",
-                "duration_seconds": 30,  # Estimate
+                "author_expertise": "intermediate",
+                "target_audience": "intermediate",
+                "duration_seconds": duration,
                 "language": "en"
             },
             "transcript": [
-                {"start_time": 0.0, "end_time": 30.0, "text": "Video content analysis unavailable - using fallback mode", "speaker": "system", "confidence": 0.5}
+                {
+                    "start_time": 0.0, 
+                    "end_time": float(duration), 
+                    "text": "Video content analysis unavailable - using fallback mode", 
+                    "speaker": "system", 
+                    "confidence": 0.5
+                }
             ],
             "technical_concepts": [
-                {"name": "Video Content", "type": "media", "context": f"Downloaded from {platform}", "importance": "medium"}
-            ],
-            "factual_claims": [],
-            "knowledge_gaps": [
-                {"topic": "Video Content Analysis", "reason": "Video upload to AI service failed", "priority": "high"}
+                {
+                    "name": "Video Content Analysis", 
+                    "type": "method", 
+                    "context": f"Downloaded from {platform}", 
+                    "importance": "medium"
+                },
+                {
+                    "name": "Manual Review Required", 
+                    "type": "process", 
+                    "context": "AI analysis temporarily unavailable", 
+                    "importance": "high"
+                }
             ],
             "educational_objectives": {
-                "primary_learning_goals": ["Review video content manually"],
+                "primary_learning_goals": ["Review video content manually", "Identify key technical concepts", "Extract practical insights"],
                 "prerequisites": ["Basic technical knowledge"],
-                "difficulty_level": "beginner",
-                "estimated_learning_time": "5 minutes"
+                "difficulty_level": "intermediate",
+                "estimated_learning_time": f"{max(5, duration//10)} minutes"
             },
             "content_outline": {
-                "main_sections": ["Video Overview", "Manual Review Required"],
-                "key_points": ["Video downloaded successfully", "AI analysis unavailable"],
+                "main_sections": ["Video Overview", "Technical Content", "Manual Review"],
+                "key_points": ["Video downloaded successfully", "AI analysis temporarily unavailable", "Manual review recommended"],
                 "practical_examples": []
             },
             "quality_assessment": {
-                "content_clarity": 0.5,
-                "technical_accuracy_confidence": 0.3,
-                "educational_value": 0.4,
-                "completeness": 0.3,
-                "overall_quality": 0.4
-            }
+                "content_clarity": 50,
+                "technical_accuracy_confidence": 40,
+                "educational_value": 45,
+                "completeness": 35,
+                "overall_quality": 42
+            },
+            "extracted_tools": []
         }
         
         logger.info("Fallback analysis created - manual review recommended")
